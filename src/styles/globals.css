@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-hind), ui-sans-serif, system-ui, sans-serif;
+  --color-risk-green: #15803d;
+  --color-risk-yellow: #ca8a04;
+  --color-risk-red: #dc2626;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45); }
+  50% { box-shadow: 0 0 0 14px rgba(220, 38, 38, 0); }
+}
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up { animation: fade-up 0.45s ease-out both; }
+
+/* Big, thumb-friendly controls (Tailwind v4 custom utilities) */
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-lg font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-lg font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 bg-teal-700 text-white shadow-sm hover:bg-teal-800; }
+@utility btn-outline { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-lg font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 border-2 border-teal-700 bg-white text-teal-800 hover:bg-teal-50; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-lg font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 text-slate-700 hover:bg-slate-100; }
+@utility card { @apply rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70; }
+@utility input { @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-lg outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-600/20; }
+
+.leaflet-container { font-family: inherit; }
