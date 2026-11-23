@@ -28,6 +28,7 @@ Most of these follow the WHO 2009 warning signs.
 | A2 | Vomiting **≥ 3 times in 24 h** = "persistent vomiting" | WHO says "persistent"; **3/24 h is our choice** | ☐ | |
 | A3 | Vomiting blood, or black stool | Bleeding | ☐ | |
 | A4 | Gum or nose bleeding, or heavy menstrual bleeding | WHO: mucosal bleeding | ☐ | |
+| A4b | **Any other bleeding, or bleeding mentioned without a site** (e.g. "রক্তপাত আছে") | Our conservative choice | ☐ | |
 | A5 | Lethargy, excessive sleepiness or restlessness | WHO warning sign | ☐ | |
 | A6 | Cold clammy hands or feet | Shock sign | ☐ | |
 | A7 | No urine for **≥ 6 h** | Our threshold | ☐ | |

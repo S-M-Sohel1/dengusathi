@@ -228,7 +228,7 @@ export default async function HandoffPage({
           </dl>
           {latest && (
             <div
-              className={`rounded-xl px-4 py-3 text-white ${STATUS[latest.status].cls}`}
+              className={`self-start rounded-xl px-4 py-3 text-white ${STATUS[latest.status].cls}`}
             >
               <p className="text-xs opacity-90">Current home triage</p>
               <p className="text-lg leading-tight font-bold">
@@ -274,10 +274,10 @@ export default async function HandoffPage({
             <p className="text-sm text-slate-600">No CBC results recorded.</p>
           ) : (
             <>
-              <table className="w-full text-sm">
+              <table className="w-full border-collapse text-sm [&_td]:py-1.5 [&_td]:pr-4 [&_td]:align-top [&_th]:py-1.5 [&_th]:pr-4 [&_th]:whitespace-nowrap">
                 <thead className="border-b border-slate-300 text-left">
                   <tr>
-                    <th className="py-1">Date</th>
+                    <th>Date</th>
                     <th>Fever day</th>
                     <th>Platelets /µL</th>
                     <th>HCT %</th>
@@ -294,8 +294,10 @@ export default async function HandoffPage({
                         : null;
                     return (
                       <tr key={l.id} className="border-b border-slate-100">
-                        <td className="py-1">{fmt(l.takenAt)}</td>
-                        <td>{labDay(l.takenAt)}</td>
+                        <td className="whitespace-nowrap">{fmt(l.takenAt)}</td>
+                        <td className="whitespace-nowrap">
+                          {labDay(l.takenAt)}
+                        </td>
                         <td
                           className={
                             l.plateletUl != null && l.plateletUl < 100_000
@@ -365,12 +367,12 @@ export default async function HandoffPage({
           {patient.checkIns.length === 0 ? (
             <p className="text-sm text-slate-600">No check-ins recorded.</p>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full border-collapse text-sm [&_td]:py-1.5 [&_td]:pr-4 [&_td]:align-top [&_th]:py-1.5 [&_th]:pr-4 [&_th]:whitespace-nowrap">
               <thead className="border-b border-slate-300 text-left">
                 <tr>
-                  <th className="py-1">When</th>
+                  <th>When</th>
                   <th>Day</th>
-                  <th>Reported</th>
+                  <th className="w-full">Reported</th>
                 </tr>
               </thead>
               <tbody>
@@ -382,10 +384,10 @@ export default async function HandoffPage({
                       key={c.id}
                       className="border-b border-slate-100 align-top"
                     >
-                      <td className="py-1 whitespace-nowrap">
-                        {fmt(c.createdAt)}
+                      <td className="whitespace-nowrap">{fmt(c.createdAt)}</td>
+                      <td className="whitespace-nowrap">
+                        D{dayOfFever(patient.feverStart, c.createdAt)}
                       </td>
-                      <td>D{dayOfFever(patient.feverStart, c.createdAt)}</td>
                       <td>
                         {items.length === 0 ? (
                           <span className="text-slate-600">

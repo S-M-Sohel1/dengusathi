@@ -17,6 +17,8 @@ export const symptomsSchema = z.object({
   blackStool: z.boolean().nullable(),
   skinSpots: z.boolean().nullable(),
   heavyMenstrualBleeding: z.boolean().nullable(),
+  /** Bleeding reported without a site, or from anywhere else (e.g. "রক্তপাত আছে", blood in urine). */
+  bleedingOther: z.boolean().nullable().default(null),
   /** No urine for 6 hours or more */
   noUrine6h: z.boolean().nullable(),
   drowsyOrRestless: z.boolean().nullable(),
@@ -40,6 +42,7 @@ export const emptySymptoms: Symptoms = {
   blackStool: null,
   skinSpots: null,
   heavyMenstrualBleeding: null,
+  bleedingOther: null,
   noUrine6h: null,
   drowsyOrRestless: null,
   coldClammyHands: null,

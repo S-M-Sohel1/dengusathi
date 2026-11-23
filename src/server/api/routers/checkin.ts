@@ -1,12 +1,26 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { symptomsSchema } from "~/lib/ai/schemas";
+import { flagMissedDangerSigns } from "~/lib/ai/safety-net";
+import { symptomsSchema, type VoiceExtraction } from "~/lib/ai/schemas";
 import { extractFromTranscript, extractVoice } from "~/lib/ai/service";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { reassessPatient } from "~/server/services/assess";
 
 /** ~45 s of 16 kHz mono WAV is ~1.4 MB, ~1.9 MB as base64. Stay well under Vercel's 4.5 MB body limit. */
 const MAX_AUDIO_BASE64 = 3_000_000;
+
+/** Highlight danger signs the words mention but the AI left empty (never sets values). */
+const withSafetyNet = <T extends { value: VoiceExtraction }>(r: T): T => ({
+  ...r,
+  value: {
+    ...r.value,
+    unclearFields: flagMissedDangerSigns(
+      r.value.transcriptBn,
+      r.value.symptoms,
+      r.value.unclearFields,
+    ),
+  },
+});
 
 const aiError = (err: unknown) =>
   new TRPCError({
@@ -26,7 +40,9 @@ export const checkinRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       try {
-        return await extractVoice(input.audioBase64, input.mimeType);
+        return withSafetyNet(
+          await extractVoice(input.audioBase64, input.mimeType),
+        );
       } catch (err) {
         throw aiError(err);
       }
@@ -37,7 +53,7 @@ export const checkinRouter = createTRPCRouter({
     .input(z.object({ transcript: z.string().min(1).max(2000) }))
     .mutation(async ({ input }) => {
       try {
-        return await extractFromTranscript(input.transcript);
+        return withSafetyNet(await extractFromTranscript(input.transcript));
       } catch (err) {
         throw aiError(err);
       }

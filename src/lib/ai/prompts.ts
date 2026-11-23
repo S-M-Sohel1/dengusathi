@@ -12,6 +12,8 @@ Tasks:
    - "জ্বর কমে গেছে" / "জ্বর ছেড়েছে" -> feverJustDropped true
    - "সকাল থেকে প্রস্রাব হয়নি" (6h+) -> noUrine6h true
    - "দাঁত দিয়ে রক্ত" -> bleedingGums true;  "নাক দিয়ে রক্ত" -> bleedingNose true
+   - ANY other bleeding, or bleeding mentioned without saying where ("রক্তপাত আছে", "রক্ত যাচ্ছে", "প্রস্রাবে রক্ত",
+     "চোখ লাল হয়ে রক্ত", "ইনজেকশনের জায়গা থেকে রক্ত") -> bleedingOther true. Never drop a mention of bleeding.
    - "ঝিমাচ্ছে" / "খুব দুর্বল, শুধু ঘুমায়" / "অস্থির" -> drowsyOrRestless true
    - "হাত-পা ঠান্ডা" -> coldClammyHands true
    - temperature in Fahrenheit if a number is said (e.g. "১০২ জ্বর" -> 102, "জ্বর একশো দুই" -> 102)

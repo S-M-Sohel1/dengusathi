@@ -96,6 +96,12 @@ export function evaluateRules(input: RuleInput): RuleResult {
       add("RED", "PERSISTENT_VOMITING", "২৪ ঘণ্টায় ৩ বা তার বেশি বার বমি");
     if (s.vomitBlood) add("RED", "VOMIT_BLOOD", "বমির সাথে রক্ত");
     if (s.blackStool) add("RED", "BLACK_STOOL", "কালো পায়খানা");
+    if (s.bleedingOther)
+      add(
+        "RED",
+        "ANY_BLEEDING",
+        "রক্তপাতের কথা বলা হয়েছে (কোথা থেকে, ডাক্তারকে জানান)",
+      );
     if (s.bleedingGums || s.bleedingNose || s.heavyMenstrualBleeding)
       add(
         "RED",

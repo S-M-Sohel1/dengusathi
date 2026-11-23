@@ -12,7 +12,8 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().min(1),
     // Model IDs change often; list what your key can use with GET /v1beta/models.
     GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
-    // Tried when the primary model is overloaded (503) or rate limited (429).
+    // Tried in order when the primary model is overloaded (503), rate limited (429) or not found.
+    // Comma-separated list. Use exact model IDs; "-latest" aliases are not supported by the SDK.
     GEMINI_FALLBACK_MODEL: z.string().optional(),
     // Groq key (free tier). Optional fallback when Gemini fails or is rate limited.
     GROQ_API_KEY: z.string().optional(),

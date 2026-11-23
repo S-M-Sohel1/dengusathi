@@ -85,7 +85,7 @@ async function withFallback<T>(
 
 /** Bangla voice clip (WAV preferred) -> transcript + structured symptoms. */
 export async function extractVoice(audioBase64: string, mimeType: string) {
-  return cached(["voice-v2", audioBase64], () =>
+  return cached(["voice-v3", audioBase64], () =>
     withFallback<VoiceExtraction>(
       "voice",
       () =>
@@ -116,7 +116,7 @@ export async function extractVoice(audioBase64: string, mimeType: string) {
 /** Typed text (e.g. from browser Web Speech API) -> structured symptoms. */
 export async function extractFromTranscript(transcript: string) {
   const prompt = VOICE_TEXT_EXTRACTION_PROMPT(transcript);
-  return cached(["text-v2", transcript], () =>
+  return cached(["text-v3", transcript], () =>
     withFallback<VoiceExtraction>(
       "text",
       () => geminiJson({ prompt, schema: voiceExtractionSchema }),

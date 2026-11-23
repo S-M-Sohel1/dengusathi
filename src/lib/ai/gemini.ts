@@ -34,9 +34,11 @@ export async function geminiJson<T extends z.ZodTypeAny>(opts: {
   const jsonSchema = zodToJsonSchema(opts.schema, { $refStrategy: "none" });
   delete (jsonSchema as Record<string, unknown>).$schema;
 
-  const models = [env.GEMINI_MODEL, env.GEMINI_FALLBACK_MODEL].filter(
-    (m): m is string => !!m,
-  );
+  // GEMINI_FALLBACK_MODEL may be a comma-separated list, tried in order.
+  const models = [
+    env.GEMINI_MODEL,
+    ...(env.GEMINI_FALLBACK_MODEL ?? "").split(",").map((m) => m.trim()),
+  ].filter((m, i, all): m is string => !!m && all.indexOf(m) === i);
   let lastErr: unknown;
   for (const model of models) {
     // "High demand" 503 spikes on the free tier usually clear within a second, so give each
@@ -47,6 +49,16 @@ export async function geminiJson<T extends z.ZodTypeAny>(opts: {
       } catch (err) {
         lastErr = err;
         // Only overload / rate-limit errors are worth retrying.
+        // A model ID that does not exist (or was retired) should not sink the request: try the next one.
+        const notFound = /404|NOT_FOUND|is not found/i.test(
+          String((err as Error)?.message ?? err),
+        );
+        if (notFound) {
+          console.warn(
+            `[gemini] ${model} not found, skipping (check GEMINI_*_MODEL)`,
+          );
+          break;
+        }
         if (!isRetryable(err)) throw err;
         const overloaded = /\b503\b|UNAVAILABLE|high demand/i.test(
           String((err as Error)?.message ?? err),

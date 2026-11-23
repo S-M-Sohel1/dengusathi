@@ -191,3 +191,20 @@ describe("combine (rules + AI)", () => {
     expect(f.adviceBn.length).toBeGreaterThan(10);
   });
 });
+
+describe("bleeding without a stated site", () => {
+  it("bleedingOther -> RED (ANY_BLEEDING)", () => {
+    const r = evaluateRules(input({ symptoms: { bleedingOther: true } }));
+    expect(r.status).toBe("RED");
+    expect(codes(r)).toContain("ANY_BLEEDING");
+  });
+
+  it("check-ins saved before the field existed still parse (defaults to null)", async () => {
+    const { symptomsSchema } = await import("~/lib/ai/schemas");
+    const old: Record<string, unknown> = { ...emptySymptoms, fever: true };
+    delete old.bleedingOther;
+    const parsed = symptomsSchema.parse(old);
+    expect(parsed.bleedingOther).toBeNull();
+    expect(parsed.fever).toBe(true);
+  });
+});
