@@ -45,6 +45,7 @@ Most of these follow the WHO 2009 warning signs.
 | B5 | Fever has just dropped **during days 3-7** (critical phase) | WHO critical phase | ☐ | |
 | B6 | No update from the family for **> 24 h** during days 3-7 | Our choice | ☐ | |
 | B7 | High-risk patient: age **< 1 y** or **≥ 65 y**, pregnancy, diabetes, kidney or heart disease, obesity | WHO co-existing conditions | ☐ | |
+| B8 | During days 3-7, if the family is logging fluids and has drunk **< 50 % of the daily target by 6 pm** → YELLOW | Our choice | ☐ | |
 
 ## C. Lab results (CBC)
 
@@ -64,6 +65,7 @@ Most of these follow the WHO 2009 warning signs.
 | D1 | Drink at least 2.5-3 L/day: water, ORS, coconut water, soup (adult) | ☐ | |
 | D2 | For fever, paracetamol only. **No ibuprofen or aspirin.** | ☐ | |
 | D3 | RED: go now; give small sips of ORS or water on the way | ☐ | |
+| D4 | Daily fluid target: adults (≥ 15 y) 2,500 ml; children by Holliday-Segar (100 ml/kg for the first 10 kg, 50 ml/kg for the next 10 kg, 20 ml/kg above), weight estimated as (age + 4) × 2 when unknown | ☐ | |
 
 ## E. Open questions
 

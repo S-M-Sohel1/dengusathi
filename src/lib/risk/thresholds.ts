@@ -29,6 +29,15 @@ export const THRESHOLDS = {
   /** No check-in during critical phase for this many hours -> YELLOW. PROTOTYPE */
   missedCheckInHours: 24,
 
+  /** Oral fluids (home care). PROTOTYPE values, listed for doctor review in docs/DOCTOR_REVIEW.md. */
+  fluids: {
+    adultFromAge: 15,
+    adultTargetMl: 2500,
+    /** After this local hour, intake below `lowFraction` of target in the critical phase -> YELLOW */
+    checkAfterHour: 18,
+    lowFraction: 0.5,
+  },
+
   /** Age-based risk (WHO lists infants and elderly as co-existing conditions). */
   infantMaxAgeYears: 1,
   elderlyMinAgeYears: 65,

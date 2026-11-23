@@ -2,6 +2,7 @@ import "server-only";
 import { type Prisma } from "../../../generated/prisma";
 import { reviewRisk } from "~/lib/ai/service";
 import { symptomsSchema } from "~/lib/ai/schemas";
+import { dhakaHour, fluidTargetMl, startOfDhakaDay } from "~/lib/fluids";
 import { combine } from "~/lib/risk/score";
 import { evaluateRules } from "~/lib/risk/who-rules";
 import { db } from "~/server/db";
@@ -27,6 +28,12 @@ export async function reassessPatient(
 
   const now = new Date();
   const latest = patient.checkIns.at(-1);
+  const fluidLogs = await db.fluidLog.findMany({
+    where: { patientId, createdAt: { gte: startOfDhakaDay(now) } },
+    select: { ml: true },
+  });
+  const fluidsTodayMl = fluidLogs.reduce((s, l) => s + l.ml, 0);
+  const fluidTarget = fluidTargetMl(patient.ageYears, patient.weightKg).ml;
   const rule = evaluateRules({
     patient,
     latestCheckIn: latest
@@ -37,6 +44,12 @@ export async function reassessPatient(
       : null,
     labs: patient.labs,
     now,
+    fluids: {
+      todayMl: fluidsTodayMl,
+      targetMl: fluidTarget,
+      logged: fluidLogs.length > 0,
+      localHour: dhakaHour(now),
+    },
   });
 
   let ai = null;
@@ -45,6 +58,8 @@ export async function reassessPatient(
       ageYears: patient.ageYears,
       riskFactors: patient.riskFactors,
       dayOfFever: rule.dayOfFever,
+      oralFluidsTodayMl: fluidLogs.length ? fluidsTodayMl : null,
+      oralFluidTargetMl: fluidTarget,
       checkIns: patient.checkIns.slice(-7).map((c) => ({
         at: c.createdAt.toISOString(),
         symptoms: c.symptoms,

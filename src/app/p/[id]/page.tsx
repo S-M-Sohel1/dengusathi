@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FluidTracker } from "~/app/_components/fluid-tracker";
 import { ShareButton } from "~/app/_components/share-button";
 import { StatusCard } from "~/app/_components/status-card";
 import { STATUS_META } from "~/lib/status-meta";
@@ -116,6 +117,8 @@ export default async function PatientPage({
           <span className="text-sm text-slate-500">ছবি তুলে দিন</span>
         </Link>
       </nav>
+
+      <FluidTracker patientId={patient.id} critical={critical} />
 
       <section className="card">
         <h2 className="mb-3 text-lg font-bold">রক্ত পরীক্ষার ট্রেন্ড</h2>

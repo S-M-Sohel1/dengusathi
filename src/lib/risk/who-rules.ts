@@ -35,6 +35,13 @@ export interface RuleInput {
   /** All lab results, any order */
   labs: RuleLab[];
   now: Date;
+  /** Oral fluids logged today (optional; only judged if the family logged something). */
+  fluids?: {
+    todayMl: number;
+    targetMl: number;
+    logged: boolean;
+    localHour: number;
+  };
 }
 
 export interface RuleResult {
@@ -59,7 +66,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Day 1 = the calendar span of the first 24 h after fever started. */
 export function dayOfFever(feverStart: Date, now: Date): number {
-  return Math.max(1, Math.floor((now.getTime() - feverStart.getTime()) / DAY_MS) + 1);
+  return Math.max(
+    1,
+    Math.floor((now.getTime() - feverStart.getTime()) / DAY_MS) + 1,
+  );
 }
 
 /**
@@ -73,7 +83,8 @@ export function evaluateRules(input: RuleInput): RuleResult {
     reasons.push({ source: "rule", code, textBn, level });
 
   const day = dayOfFever(patient.feverStart, now);
-  const critical = day >= T.criticalPhaseStartDay && day <= T.criticalPhaseEndDay;
+  const critical =
+    day >= T.criticalPhaseStartDay && day <= T.criticalPhaseEndDay;
 
   // ---------- Symptoms (latest check-in) ----------
   const s = latestCheckIn?.symptoms;
@@ -86,12 +97,17 @@ export function evaluateRules(input: RuleInput): RuleResult {
     if (s.vomitBlood) add("RED", "VOMIT_BLOOD", "বমির সাথে রক্ত");
     if (s.blackStool) add("RED", "BLACK_STOOL", "কালো পায়খানা");
     if (s.bleedingGums || s.bleedingNose || s.heavyMenstrualBleeding)
-      add("RED", "MUCOSAL_BLEEDING", "দাঁতের মাড়ি, নাক বা অতিরিক্ত মাসিকের রক্তপাত");
+      add(
+        "RED",
+        "MUCOSAL_BLEEDING",
+        "দাঁতের মাড়ি, নাক বা অতিরিক্ত মাসিকের রক্তপাত",
+      );
     if (s.drowsyOrRestless)
       add("RED", "LETHARGY_RESTLESSNESS", "অতিরিক্ত ঘুম ঘুম ভাব বা অস্থিরতা");
     if (s.coldClammyHands)
       add("RED", "COLD_CLAMMY", "হাত-পা ঠান্ডা ও ভেজা ভেজা");
-    if (s.noUrine6h) add("RED", "NO_URINE_6H", "৬ ঘণ্টা বা বেশি সময় প্রস্রাব হয়নি");
+    if (s.noUrine6h)
+      add("RED", "NO_URINE_6H", "৬ ঘণ্টা বা বেশি সময় প্রস্রাব হয়নি");
     if (s.canDrinkFluids === false)
       add("RED", "CANNOT_DRINK", "মুখে পানি বা তরল খেতে পারছে না");
     if (s.breathingDifficulty) add("RED", "BREATHING", "শ্বাসকষ্ট");
@@ -103,8 +119,7 @@ export function evaluateRules(input: RuleInput): RuleResult {
     if (v > 0 && v < T.persistentVomitingCount)
       add("YELLOW", "SOME_VOMITING", "বমি হয়েছে");
     if (s.skinSpots) add("YELLOW", "SKIN_SPOTS", "চামড়ায় লাল ছোপ বা দাগ");
-    if (s.dizzyOnStanding)
-      add("YELLOW", "DIZZY", "দাঁড়ালে মাথা ঘোরে");
+    if (s.dizzyOnStanding) add("YELLOW", "DIZZY", "দাঁড়ালে মাথা ঘোরে");
     if (s.feverJustDropped && critical)
       add(
         "YELLOW",
@@ -112,6 +127,20 @@ export function evaluateRules(input: RuleInput): RuleResult {
         "জ্বর কমেছে, কিন্তু এখনই সবচেয়ে ঝুঁকির সময় (৩য়-৭ম দিন)",
       );
   }
+
+  // ---------- Low oral fluids in the critical phase (only if the family is logging) ----------
+  const f = input.fluids;
+  if (
+    critical &&
+    f?.logged &&
+    f.localHour >= T.fluids.checkAfterHour &&
+    f.todayMl < f.targetMl * T.fluids.lowFraction
+  )
+    add(
+      "YELLOW",
+      "LOW_FLUIDS",
+      `আজ লক্ষ্যের অর্ধেকের কম তরল খেয়েছে (${toBn(f.todayMl)} / ${toBn(f.targetMl)} মিলি)`,
+    );
 
   // ---------- Missed check-in during critical phase ----------
   if (critical) {
@@ -122,23 +151,36 @@ export function evaluateRules(input: RuleInput): RuleResult {
   }
 
   // ---------- Labs ----------
-  const labs = [...input.labs].sort((a, b) => a.takenAt.getTime() - b.takenAt.getTime());
-  const plts = labs.filter((l) => l.plateletUl != null).map((l) => l.plateletUl!);
+  const labs = [...input.labs].sort(
+    (a, b) => a.takenAt.getTime() - b.takenAt.getTime(),
+  );
+  const plts = labs
+    .filter((l) => l.plateletUl != null)
+    .map((l) => l.plateletUl!);
   const hcts = labs.filter((l) => l.hctPct != null).map((l) => l.hctPct!);
 
   let plateletTrend: RuleResult["plateletTrend"] = null;
   if (plts.length >= 2) {
     const [prev, last] = plts.slice(-2) as [number, number];
     const change = (last - prev) / prev;
-    plateletTrend = change < -0.1 ? "falling" : change > 0.1 ? "rising" : "stable";
+    plateletTrend =
+      change < -0.1 ? "falling" : change > 0.1 ? "rising" : "stable";
   }
 
   const latestPlt = plts.at(-1);
   if (latestPlt != null) {
     if (latestPlt < T.plateletRed)
-      add("RED", "PLATELET_VERY_LOW", `প্লাটিলেট খুব কম (${toBn(latestPlt.toLocaleString("en-IN"))})`);
+      add(
+        "RED",
+        "PLATELET_VERY_LOW",
+        `প্লাটিলেট খুব কম (${toBn(latestPlt.toLocaleString("en-IN"))})`,
+      );
     else if (latestPlt <= T.plateletYellow)
-      add("YELLOW", "PLATELET_LOW", `প্লাটিলেট কম (${toBn(latestPlt.toLocaleString("en-IN"))})`);
+      add(
+        "YELLOW",
+        "PLATELET_LOW",
+        `প্লাটিলেট কম (${toBn(latestPlt.toLocaleString("en-IN"))})`,
+      );
   }
 
   let hctRisePct: number | null = null;
@@ -156,7 +198,12 @@ export function evaluateRules(input: RuleInput): RuleResult {
       // WHO lab warning sign: rising HCT together with rapidly falling platelets
       if (plateletTrend === "falling")
         add("RED", "HCT_UP_PLT_DOWN", "হেমাটোক্রিট বাড়ছে আর প্লাটিলেট দ্রুত কমছে");
-      else add("YELLOW", "HCT_RISE", `হেমাটোক্রিট ${toBn(Math.round(hctRisePct))}% বেড়েছে`);
+      else
+        add(
+          "YELLOW",
+          "HCT_RISE",
+          `হেমাটোক্রিট ${toBn(Math.round(hctRisePct))}% বেড়েছে`,
+        );
     }
   }
 

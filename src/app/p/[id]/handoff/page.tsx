@@ -9,6 +9,7 @@ import {
   symptomsEn,
   WHO_RULE_CODES,
 } from "~/lib/clinical-labels";
+import { fluidTargetMl, startOfDhakaDay } from "~/lib/fluids";
 import { dayOfFever, type Reason } from "~/lib/risk/who-rules";
 import { db } from "~/server/db";
 import { HandoffActions } from "./handoff-actions";
@@ -117,6 +118,10 @@ export default async function HandoffPage({
       checkIns: { orderBy: { createdAt: "asc" } },
       labs: { where: { confirmed: true }, orderBy: { takenAt: "asc" } },
       assessments: { orderBy: { createdAt: "desc" }, take: 1 },
+      fluids: {
+        where: { createdAt: { gte: new Date(Date.now() - 2 * 864e5) } },
+        select: { ml: true, createdAt: true },
+      },
     },
   });
   if (!patient) notFound();
@@ -139,6 +144,15 @@ export default async function HandoffPage({
   const reasons = (latest?.reasons ?? []) as unknown as Reason[];
   const baseHct = patient.labs.find((l) => l.hctPct != null)?.hctPct ?? null;
   const labDay = (d: Date) => `D${dayOfFever(patient.feverStart, d)}`;
+  const todayStart = startOfDhakaDay(now);
+  const yStart = new Date(todayStart.getTime() - 864e5);
+  const fluidToday = patient.fluids
+    .filter((f) => f.createdAt >= todayStart)
+    .reduce((s, f) => s + f.ml, 0);
+  const fluidYesterday = patient.fluids
+    .filter((f) => f.createdAt >= yStart && f.createdAt < todayStart)
+    .reduce((s, f) => s + f.ml, 0);
+  const fluidTarget = fluidTargetMl(patient.ageYears, patient.weightKg).ml;
   const risk = [
     ...patient.riskFactors.map((r) => RISK_FACTOR_EN[r] ?? r),
     ...(patient.ageYears < 1 ? ["Infant"] : []),
@@ -194,6 +208,19 @@ export default async function HandoffPage({
                 <span className="ml-1 font-bold text-red-700">
                   (critical phase)
                 </span>
+              )}
+            </dd>
+            <dt className="font-semibold">Oral fluids</dt>
+            <dd>
+              {patient.fluids.length === 0 ? (
+                "Not logged"
+              ) : (
+                <>
+                  Today {fluidToday} ml · yesterday {fluidYesterday} ml{" "}
+                  <span className="text-slate-600">
+                    (home target ~{fluidTarget} ml/day)
+                  </span>
+                </>
               )}
             </dd>
             <dt className="font-semibold">Risk factors</dt>
