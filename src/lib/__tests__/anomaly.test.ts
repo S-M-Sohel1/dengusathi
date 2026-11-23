@@ -20,10 +20,14 @@ describe("detectSpike", () => {
     expect(detectSpike(series([0, 0, 0, 0, 0, 0, 0, 3])).isSpike).toBe(true);
   });
 
-  it("ignores a statistically significant but small rise (< 1.5x)", () => {
-    // very steady baseline of 6, today 8: z is high but only 1.33x
-    expect(detectSpike(series([6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 9])).isSpike).toBe(true);
+  it("ignores small rises over a very steady baseline (Poisson floor + 1.5x rule)", () => {
+    // flat baseline of 6: SD 0, but Poisson spread is sqrt(6) = 2.45
     expect(detectSpike(series([6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 8])).isSpike).toBe(false);
+    expect(detectSpike(series([6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 12])).isSpike).toBe(true);
+  });
+
+  it("does not flag 2 -> 4 (random noise for small counts)", () => {
+    expect(detectSpike(series([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 4])).isSpike).toBe(false);
   });
 
   it("handles empty and single-day series", () => {

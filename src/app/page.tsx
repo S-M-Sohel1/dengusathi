@@ -28,7 +28,12 @@ const FEATURES = [
 export default function Home() {
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:py-12">
-      <section className="grid items-center gap-8 md:grid-cols-[1.2fr_1fr]">
+      <section className="relative isolate grid items-center gap-8 md:grid-cols-[1.2fr_1fr]">
+        {/* static dot-grid backdrop, faded at the edges (background pattern idea from 21st.dev; no motion) */}
+        <div
+          aria-hidden
+          className="hero-dots pointer-events-none absolute -inset-x-8 -inset-y-10 -z-10"
+        />
         <div className="fade-up">
           <p className="mb-3 inline-block rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
             DGHS পর্যালোচনা: ১১৪টি ডেঙ্গু মৃত্যুর ৬৬টি (৫৮%) ভর্তির ২৪ ঘণ্টার মধ্যে
@@ -69,7 +74,7 @@ export default function Home() {
               {[1, 2, 3, 4, 5, 6, 7].map((d) => (
                 <div
                   key={d}
-                  className={`flex h-14 flex-1 flex-col items-center justify-center rounded-lg text-sm font-bold ${d >= 3 ? "bg-red-500" : "bg-white/20"}`}
+                  className={`flex h-14 flex-1 flex-col items-center justify-center rounded-lg text-sm font-bold ${d >= 3 ? "bg-red-600" : "bg-white/20"}`}
                 >
                   <span className="text-[10px] font-normal opacity-80">
                     দিন

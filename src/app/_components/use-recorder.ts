@@ -3,15 +3,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export const MAX_RECORD_SECONDS = 45;
+/** Number of bars in the live voice visualizer. */
+export const BAR_COUNT = 32;
 
 /**
  * MediaRecorder wrapper: start/stop, elapsed seconds, live input level (0..1) for the meter,
  * auto-stop at MAX_RECORD_SECONDS. Mic access requires HTTPS (or localhost).
  */
 export function useRecorder() {
-  const [state, setState] = useState<"idle" | "recording" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "recording" | "done" | "error">(
+    "idle",
+  );
   const [elapsed, setElapsed] = useState(0);
   const [level, setLevel] = useState(0);
+  const [bars, setBars] = useState<number[]>(() =>
+    Array<number>(BAR_COUNT).fill(0),
+  );
   const [error, setError] = useState<string | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
 
@@ -28,6 +35,7 @@ export function useRecorder() {
     void ctx.current?.close().catch(() => undefined);
     ctx.current = null;
     setLevel(0);
+    setBars(Array<number>(BAR_COUNT).fill(0));
   }, []);
 
   useEffect(() => cleanup, [cleanup]);
@@ -41,13 +49,19 @@ export function useRecorder() {
     setBlob(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setState("error");
-      setError("এই ব্রাউজারে মাইক্রোফোন চালু করা যাচ্ছে না। Chrome ব্যবহার করুন, অথবা নিচের ফর্ম দিন।");
+      setError(
+        "এই ব্রাউজারে মাইক্রোফোন চালু করা যাচ্ছে না। Chrome ব্যবহার করুন, অথবা নিচের ফর্ম দিন।",
+      );
       return;
     }
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const s = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
       stream.current = s;
-      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg"].find((m) => MediaRecorder.isTypeSupported(m));
+      const mime = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg"].find(
+        (m) => MediaRecorder.isTypeSupported(m),
+      );
       const r = new MediaRecorder(s, mime ? { mimeType: mime } : undefined);
       const chunks: BlobPart[] = [];
       r.ondataavailable = (e) => e.data.size && chunks.push(e.data);
@@ -64,12 +78,26 @@ export function useRecorder() {
       const an = ac.createAnalyser();
       an.fftSize = 512;
       ac.createMediaStreamSource(s).connect(an);
+      an.smoothingTimeConstant = 0.7;
       const buf = new Uint8Array(an.fftSize);
+      const freq = new Uint8Array(an.frequencyBinCount);
+      // Speech energy sits roughly in the lowest ~40% of bins at this FFT size; spread it over the bars.
+      const usable = Math.floor(freq.length * 0.4);
       const tick = () => {
         an.getByteTimeDomainData(buf);
         let sum = 0;
         for (const v of buf) sum += ((v - 128) / 128) ** 2;
         setLevel(Math.min(1, Math.sqrt(sum / buf.length) * 4));
+        an.getByteFrequencyData(freq);
+        const per = Math.max(1, Math.floor(usable / BAR_COUNT));
+        setBars(
+          Array.from({ length: BAR_COUNT }, (_, i) => {
+            let m = 0;
+            for (let k = i * per; k < (i + 1) * per; k++)
+              m = Math.max(m, freq[k] ?? 0);
+            return m / 255;
+          }),
+        );
         raf.current = requestAnimationFrame(tick);
       };
       tick();
@@ -101,5 +129,5 @@ export function useRecorder() {
     setState("idle");
   }, []);
 
-  return { state, elapsed, level, error, blob, start, stop, reset };
+  return { state, elapsed, level, bars, error, blob, start, stop, reset };
 }

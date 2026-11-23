@@ -33,8 +33,9 @@ export function detectSpike(series: DailyCount[], baselineDays = 14): SpikeResul
 
   const mean = base.reduce((a, b) => a + b, 0) / base.length;
   const sd = Math.sqrt(base.reduce((a, b) => a + (b - mean) ** 2, 0) / base.length);
-  // Floor the SD at 1 so a flat, quiet baseline does not make tiny changes look like spikes.
-  const z = (today - mean) / Math.max(sd, 1);
+  // Daily case counts are roughly Poisson, whose natural spread is sqrt(mean). Floor the SD at
+  // max(1, sqrt(mean)) so a flat, quiet baseline does not make small random bumps look like spikes.
+  const z = (today - mean) / Math.max(sd, 1, Math.sqrt(mean));
   return {
     today,
     mean,

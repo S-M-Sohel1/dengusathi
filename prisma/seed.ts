@@ -102,8 +102,9 @@ async function seedPopulation() {
   const rows: Rows = { patients: [], checkIns: [], labs: [], assessments: [] };
   for (let d = 21; d >= 0; d--) {
     for (const area of AREAS) {
-      const spike = area.id === SPIKE_AREA && d <= 3;
-      const expected = AREA_WEIGHT[area.id]! * (spike ? 5 : 1.1);
+      // Outbreak cluster: fever onsets ~2 days ago, so those patients enter the critical phase (day 3) today.
+      const spike = area.id === SPIKE_AREA && d === 2;
+      const expected = AREA_WEIGHT[area.id]! * (spike ? 9 : 1.1);
       const n = Math.floor(expected + rand());
       for (let i = 0; i < n; i++) {
         const feverStart = new Date(now.getTime() - d * DAY - between(0, 20) * 3600e3);

@@ -9,7 +9,13 @@ import { areaName } from "~/lib/areas";
 import { summarizeSymptoms, toBn } from "~/lib/symptom-labels";
 import { dayOfFever, type Reason } from "~/lib/risk/who-rules";
 import { api } from "~/trpc/server";
-import { FlaskConical, Mic, TriangleAlert } from "lucide-react";
+import {
+  FlaskConical,
+  ListChecks,
+  Mic,
+  Siren,
+  TriangleAlert,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -157,60 +163,95 @@ export default async function PatientPage({
             এখনও কোনো আপডেট নেই। উপরের &quot;আজকের আপডেট&quot; চাপুন।
           </p>
         ) : (
-          <ol className="flex flex-col gap-3">
-            {patient.checkIns.map((c) => {
+          <ol className="relative">
+            {patient.checkIns.map((c, idx) => {
               const parsed = symptomsSchema.safeParse(c.symptoms);
               const chips = parsed.success
                 ? summarizeSymptoms(parsed.data)
                 : [];
-              const a = patient.assessments.find(
-                (x) =>
-                  Math.abs(x.createdAt.getTime() - c.createdAt.getTime()) <
-                  5 * 60e3,
-              );
+              // Status for this check-in: the latest assessment made from it or later the same day
+              // (e.g. after a CBC was added a few hours later), but before the next check-in.
+              const next =
+                patient.checkIns[idx - 1]?.createdAt.getTime() ?? Infinity;
+              const from = c.createdAt.getTime() - 5 * 60e3;
+              const a = patient.assessments.find((x) => {
+                const t = x.createdAt.getTime();
+                return t >= from && t < Math.min(next, from + 12 * 3600e3);
+              });
+              const meta = a ? STATUS_META[a.status] : null;
+              const dot = a
+                ? {
+                    GREEN: "bg-risk-green",
+                    YELLOW: "bg-risk-yellow",
+                    RED: "bg-risk-red",
+                  }[a.status]
+                : "bg-slate-400";
+              const last = idx === patient.checkIns.length - 1;
               return (
-                <li
-                  key={c.id}
-                  className="flex gap-3 border-l-4 border-slate-200 pl-3"
-                  style={
-                    a
-                      ? {
-                          borderColor: {
-                            GREEN: "#15803d",
-                            YELLOW: "#ca8a04",
-                            RED: "#dc2626",
-                          }[a.status],
-                        }
-                      : undefined
-                  }
-                >
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-500">
-                      জ্বরের {toBn(dayOfFever(patient.feverStart, c.createdAt))}{" "}
-                      নম্বর দিন · {c.source === "VOICE" ? "ভয়েস" : "ফর্ম"}
-                      {a && (
-                        <span
-                          className={`ml-2 font-bold ${STATUS_META[a.status].text}`}
-                        >
-                          {STATUS_META[a.status].title}
-                        </span>
-                      )}
-                    </p>
+                <li key={c.id} className="relative flex gap-4 pb-6 last:pb-0">
+                  {/* vertical rail + status dot (timeline pattern) */}
+                  {!last && (
+                    <span
+                      aria-hidden
+                      className="absolute top-8 left-[15px] h-[calc(100%-1.5rem)] w-0.5 bg-slate-200"
+                    />
+                  )}
+                  <span
+                    className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full text-white ring-4 ring-white ${dot}`}
+                  >
+                    {a?.status === "RED" ? (
+                      <Siren className="size-4" aria-hidden />
+                    ) : a?.status === "YELLOW" ? (
+                      <TriangleAlert className="size-4" aria-hidden />
+                    ) : c.source === "VOICE" ? (
+                      <Mic className="size-4" aria-hidden />
+                    ) : (
+                      <ListChecks className="size-4" aria-hidden />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                      <p className="font-semibold">
+                        জ্বরের{" "}
+                        {toBn(dayOfFever(patient.feverStart, c.createdAt))} নম্বর
+                        দিন
+                        {meta && (
+                          <span
+                            className={`ml-2 text-sm font-bold ${meta.text}`}
+                          >
+                            {meta.title}
+                          </span>
+                        )}
+                      </p>
+                      <time
+                        dateTime={c.createdAt.toISOString()}
+                        className="text-xs text-slate-600"
+                      >
+                        {c.createdAt.toLocaleString("bn-BD", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                        {" · "}
+                        {c.source === "VOICE" ? "ভয়েস" : "ফর্ম"}
+                      </time>
+                    </div>
                     {c.transcript && (
-                      <p className="mt-0.5 italic">
+                      <p className="mt-1 text-slate-700 italic">
                         &ldquo;{c.transcript}&rdquo;
                       </p>
                     )}
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="mt-2 flex flex-wrap gap-1.5">
                       {chips.length === 0 && (
-                        <span className="text-sm text-slate-500">
+                        <span className="text-sm text-slate-600">
                           কোনো বিপদচিহ্ন নেই
                         </span>
                       )}
                       {chips.map((ch) => (
                         <span
                           key={ch.text}
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${ch.danger ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-700"}`}
+                          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ch.danger ? "bg-red-100 text-red-800" : "bg-slate-100 text-slate-700"}`}
                         >
                           {ch.text}
                         </span>

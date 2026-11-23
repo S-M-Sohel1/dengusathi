@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Steps } from "~/app/_components/steps";
 import { SymptomEditor } from "~/app/_components/symptom-editor";
+import { VoiceVisualizer } from "~/app/_components/voice-visualizer";
 import {
   MAX_RECORD_SECONDS,
   useRecorder,
@@ -15,6 +17,7 @@ import { api } from "~/trpc/react";
 import { Check, Keyboard, ListChecks, Mic, Square } from "lucide-react";
 
 type Step = "speak" | "processing" | "confirm";
+const STEP_LABELS = ["বলুন", "মিলিয়ে নিন", "ফলাফল"];
 
 const EXAMPLES = [
   "জ্বর কমে গেছে কিন্তু পেটে খুব ব্যথা, আজকে দুইবার বমি করছে",
@@ -108,27 +111,31 @@ export function CheckinFlow({
 
   if (step === "processing")
     return (
-      <div className="card flex flex-col items-center gap-4 py-12 text-center">
-        <div className="flex h-16 items-end gap-1.5">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <span
-              key={i}
-              className="w-3 rounded-full bg-teal-600"
-              style={{
-                height: "100%",
-                animation: `wave 0.9s ${i * 0.12}s ease-in-out infinite`,
-              }}
-            />
-          ))}
+      <div className="flex flex-col gap-4">
+        <Steps steps={STEP_LABELS} current={1} />
+        <div className="card flex flex-col items-center gap-4 py-12 text-center">
+          <div className="flex h-16 items-end gap-1.5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span
+                key={i}
+                className="w-3 rounded-full bg-teal-600"
+                style={{
+                  height: "100%",
+                  animation: `wave 0.9s ${i * 0.12}s ease-in-out infinite`,
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-xl font-bold">AI আপনার কথা বুঝে নিচ্ছে...</p>
+          <p className="text-slate-600">সাধারণত ৫-১৫ সেকেন্ড লাগে</p>
         </div>
-        <p className="text-xl font-bold">AI আপনার কথা বুঝে নিচ্ছে...</p>
-        <p className="text-slate-500">সাধারণত ৫-১৫ সেকেন্ড লাগে</p>
       </div>
     );
 
   if (step === "confirm")
     return (
       <div className="flex flex-col gap-4">
+        <Steps steps={STEP_LABELS} current={1} />
         {transcript && (
           <div className="card fade-up bg-teal-50 ring-teal-200">
             <p className="text-sm font-semibold text-teal-800">
@@ -194,6 +201,7 @@ export function CheckinFlow({
   const recording = rec.state === "recording";
   return (
     <div className="flex flex-col gap-4">
+      <Steps steps={STEP_LABELS} current={0} />
       <div className="card flex flex-col items-center gap-5 py-8 text-center">
         <p className="text-lg text-slate-600">
           জ্বরের {toBn(dayOfFever)} নম্বর দিন। রোগী আজ কেমন আছে, নিজের ভাষায় বলুন।
@@ -226,12 +234,15 @@ export function CheckinFlow({
             )}
           </span>
         </button>
+        <VoiceVisualizer
+          bars={rec.bars}
+          active={recording}
+          elapsed={rec.elapsed}
+          max={MAX_RECORD_SECONDS}
+        />
         <p className="text-xl font-bold">
-          {recording
-            ? `বলছেন... ${toBn(rec.elapsed)} / ${toBn(MAX_RECORD_SECONDS)} সেকেন্ড`
-            : "চাপ দিয়ে বলা শুরু করুন"}
+          {recording ? "বলছেন... শেষ হলে আবার চাপ দিন" : "চাপ দিয়ে বলা শুরু করুন"}
         </p>
-        {recording && <p className="text-slate-500">শেষ হলে আবার চাপ দিন</p>}
       </div>
 
       {(error ?? rec.error) && (

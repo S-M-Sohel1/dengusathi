@@ -13,9 +13,16 @@ import {
   YAxis,
 } from "recharts";
 import type { MapPoint } from "~/app/_components/leaflet-map";
+import { KpiCard } from "./kpi-card";
 import { toBn } from "~/lib/symptom-labels";
 import { api } from "~/trpc/react";
-import { TriangleAlert } from "lucide-react";
+import {
+  BedDouble,
+  CircleCheck,
+  Siren,
+  TriangleAlert,
+  Users,
+} from "lucide-react";
 
 const LeafletMap = dynamic(() => import("~/app/_components/leaflet-map"), {
   ssr: false,
@@ -97,14 +104,38 @@ export function DashboardView() {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi label="সক্রিয় রোগী (বাসায়)" value={d.totals.active} tone="slate" />
-        <Kpi label="লাল: এখনই হাসপাতাল" value={d.totals.red} tone="red" />
-        <Kpi label="হলুদ: ডাক্তার দেখাবে" value={d.totals.yellow} tone="yellow" />
-        <Kpi label="সবুজ: বাসায় যত্ন" value={d.totals.green} tone="green" />
-        <Kpi
+        <KpiCard
+          label="সক্রিয় রোগী (বাসায়)"
+          value={d.totals.active}
+          tone="slate"
+          icon={Users}
+        />
+        <KpiCard
+          label="লাল: এখনই হাসপাতাল"
+          value={d.totals.red}
+          tone="red"
+          icon={Siren}
+          trend={d.series.map((s) => s.red)}
+        />
+        <KpiCard
+          label="হলুদ: ডাক্তার দেখাবে"
+          value={d.totals.yellow}
+          tone="yellow"
+          icon={TriangleAlert}
+          trend={d.series.map((s) => s.yellow)}
+        />
+        <KpiCard
+          label="সবুজ: বাসায় যত্ন"
+          value={d.totals.green}
+          tone="green"
+          icon={CircleCheck}
+        />
+        <KpiCard
           label="আগামী ৪৮ ঘণ্টায় সম্ভাব্য ভর্তি*"
           value={d.totals.expectedRed48h}
           tone="blue"
+          icon={BedDouble}
+          note="বেড ও স্যালাইন প্রস্তুত রাখুন"
         />
       </div>
 
@@ -203,30 +234,6 @@ export function DashboardView() {
           {new Date(d.generatedAt).toLocaleTimeString("bn-BD")}।
         </p>
       </section>
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "slate" | "red" | "yellow" | "green" | "blue";
-}) {
-  const c = {
-    slate: "text-slate-900",
-    red: "text-red-600",
-    yellow: "text-yellow-600",
-    green: "text-green-700",
-    blue: "text-blue-700",
-  }[tone];
-  return (
-    <div className="card !p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className={`text-4xl font-bold ${c}`}>{toBn(value)}</p>
     </div>
   );
 }

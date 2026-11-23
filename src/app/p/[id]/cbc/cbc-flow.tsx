@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Steps } from "~/app/_components/steps";
 import { compressImage } from "~/lib/image/compress";
 import { api } from "~/trpc/react";
 import {
@@ -183,6 +184,10 @@ export function CbcFlow({
 
   return (
     <div className="flex flex-col gap-4">
+      <Steps
+        steps={["ছবি দিন", "মিলিয়ে নিন", "ফলাফল"]}
+        current={values ? 1 : 0}
+      />
       {!preview && !values && (
         <div className="card flex flex-col items-center gap-4 py-8 text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full bg-teal-50 text-teal-700">

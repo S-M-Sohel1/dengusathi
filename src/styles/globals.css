@@ -101,6 +101,20 @@
   @apply min-h-11 w-full rounded-xl border border-slate-500 bg-white px-3 py-2.5 text-lg text-slate-900 placeholder:text-slate-500 focus:border-teal-700 focus:ring-2 focus:ring-teal-700/30;
 }
 
+/* Landing hero backdrop: soft teal dots fading out toward the edges. */
+.hero-dots {
+  background-image: radial-gradient(
+    rgb(15 118 110 / 0.18) 1.2px,
+    transparent 1.2px
+  );
+  background-size: 22px 22px;
+  mask-image: radial-gradient(
+    ellipse 70% 65% at 40% 45%,
+    #000 40%,
+    transparent 100%
+  );
+}
+
 .leaflet-container {
   font-family: inherit;
 }
