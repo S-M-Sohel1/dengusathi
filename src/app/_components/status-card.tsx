@@ -4,7 +4,13 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Reason, Status } from "~/lib/risk/who-rules";
 import { STATUS_META } from "~/lib/status-meta";
-
+import {
+  CircleCheck,
+  Hospital,
+  Siren,
+  TriangleAlert,
+  Volume2,
+} from "lucide-react";
 
 export function StatusCard({
   status,
@@ -29,7 +35,8 @@ export function StatusCard({
 
   const speak = () => {
     // Prefer the pre-recorded Bangla clip; fall back to the browser's Bangla voice if present.
-    const a = audioRef.current ?? new Audio(`/audio/${status.toLowerCase()}.wav`);
+    const a =
+      audioRef.current ?? new Audio(`/audio/${status.toLowerCase()}.wav`);
     audioRef.current = a;
     setSpeaking(true);
     a.onended = () => setSpeaking(false);
@@ -47,19 +54,34 @@ export function StatusCard({
   }, [autoPlay, status]);
 
   return (
-    <section className={`overflow-hidden rounded-3xl text-white shadow-lg ring-4 ${meta.bg} ${meta.ring} ${status === "RED" ? "animate-[pulse-ring_2s_ease-in-out_infinite]" : ""}`}>
+    <section
+      className={`overflow-hidden rounded-3xl text-white shadow-lg ring-4 ${meta.bg} ${meta.ring} ${status === "RED" ? "animate-[pulse-ring_2s_ease-in-out_infinite]" : ""}`}
+    >
       <div className="flex items-center gap-4 p-5">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/25 text-4xl font-black">{meta.icon}</div>
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/25">
+          {status === "RED" ? (
+            <Siren className="size-9" aria-hidden />
+          ) : status === "YELLOW" ? (
+            <TriangleAlert className="size-9" aria-hidden />
+          ) : (
+            <CircleCheck className="size-9" aria-hidden />
+          )}
+        </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium opacity-90">আজকের অবস্থা: {meta.title}</p>
-          <p className="text-2xl leading-tight font-bold sm:text-3xl">{meta.sub}</p>
+          <p className="text-sm font-medium opacity-90">
+            আজকের অবস্থা: {meta.title}
+          </p>
+          <p className="text-2xl leading-tight font-bold sm:text-3xl">
+            {meta.sub}
+          </p>
         </div>
         <button
           onClick={speak}
           aria-label="শুনুন"
-          className="shrink-0 rounded-full bg-white/20 px-3 py-2 text-sm font-semibold hover:bg-white/30"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-white/20 px-4 text-sm font-semibold transition-colors hover:bg-white/30"
         >
-          {speaking ? "🔊 বলছে..." : "🔊 শুনুন"}
+          <Volume2 className="size-4" aria-hidden />
+          {speaking ? "বলছে..." : "শুনুন"}
         </button>
       </div>
 
@@ -83,12 +105,16 @@ export function StatusCard({
             href={hospitalsHref}
             className={`mt-4 flex items-center justify-center gap-2 rounded-2xl bg-white py-3 text-lg font-bold ${meta.text}`}
           >
-            🏥 নিকটস্থ হাসপাতাল দেখুন
+            <Hospital className="size-5" aria-hidden /> নিকটস্থ হাসপাতাল দেখুন
           </Link>
         )}
         {updatedAt && (
           <p className="mt-3 text-xs opacity-80">
-            শেষ হালনাগাদ: {updatedAt.toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" })}
+            শেষ হালনাগাদ:{" "}
+            {updatedAt.toLocaleString("bn-BD", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
           </p>
         )}
       </div>

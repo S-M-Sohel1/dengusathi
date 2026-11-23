@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SymptomEditor } from "~/app/_components/symptom-editor";
-import { MAX_RECORD_SECONDS, useRecorder } from "~/app/_components/use-recorder";
+import {
+  MAX_RECORD_SECONDS,
+  useRecorder,
+} from "~/app/_components/use-recorder";
 import { emptySymptoms, type Symptoms } from "~/lib/ai/schemas";
 import { blobToBase64, blobToWav16k } from "~/lib/audio/toWav";
 import { toBn } from "~/lib/symptom-labels";
 import { api } from "~/trpc/react";
+import { Check, Keyboard, ListChecks, Mic, Square } from "lucide-react";
 
 type Step = "speak" | "processing" | "confirm";
 
@@ -18,7 +22,13 @@ const EXAMPLES = [
   "সকাল থেকে প্রস্রাব হয়নি, খুব ঝিমাচ্ছে, দাঁত দিয়ে রক্ত পড়ছে",
 ];
 
-export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayOfFever: number }) {
+export function CheckinFlow({
+  patientId,
+  dayOfFever,
+}: {
+  patientId: string;
+  dayOfFever: number;
+}) {
   const router = useRouter();
   const rec = useRecorder();
   const [step, setStep] = useState<Step>("speak");
@@ -30,7 +40,11 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
   const [showType, setShowType] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const onExtracted = (r: { transcriptBn: string; symptoms: Symptoms; unclearFields: string[] }) => {
+  const onExtracted = (r: {
+    transcriptBn: string;
+    symptoms: Symptoms;
+    unclearFields: string[];
+  }) => {
     setSymptoms(r.symptoms);
     setTranscript(r.transcriptBn);
     setUnclear(r.unclearFields);
@@ -41,8 +55,14 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
     setError(e.message);
     setStep("speak");
   };
-  const voice = api.checkin.extractVoice.useMutation({ onSuccess: (r) => onExtracted(r.value), onError: onFail });
-  const text = api.checkin.extractText.useMutation({ onSuccess: (r) => onExtracted(r.value), onError: onFail });
+  const voice = api.checkin.extractVoice.useMutation({
+    onSuccess: (r) => onExtracted(r.value),
+    onError: onFail,
+  });
+  const text = api.checkin.extractText.useMutation({
+    onSuccess: (r) => onExtracted(r.value),
+    onError: onFail,
+  });
   const save = api.checkin.save.useMutation({
     onSuccess: () => {
       router.push(`/p/${patientId}?updated=1`);
@@ -64,9 +84,14 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
     void (async () => {
       try {
         const wav = await blobToWav16k(rec.blob!);
-        voice.mutate({ audioBase64: await blobToBase64(wav), mimeType: "audio/wav" });
+        voice.mutate({
+          audioBase64: await blobToBase64(wav),
+          mimeType: "audio/wav",
+        });
       } catch {
-        onFail({ message: "অডিও প্রসেস করা যায়নি। আবার বলুন বা ফর্ম ব্যবহার করুন।" });
+        onFail({
+          message: "অডিও প্রসেস করা যায়নি। আবার বলুন বা ফর্ম ব্যবহার করুন।",
+        });
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +111,14 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
       <div className="card flex flex-col items-center gap-4 py-12 text-center">
         <div className="flex h-16 items-end gap-1.5">
           {[0, 1, 2, 3, 4].map((i) => (
-            <span key={i} className="w-3 rounded-full bg-teal-600" style={{ height: "100%", animation: `wave 0.9s ${i * 0.12}s ease-in-out infinite` }} />
+            <span
+              key={i}
+              className="w-3 rounded-full bg-teal-600"
+              style={{
+                height: "100%",
+                animation: `wave 0.9s ${i * 0.12}s ease-in-out infinite`,
+              }}
+            />
           ))}
         </div>
         <p className="text-xl font-bold">AI আপনার কথা বুঝে নিচ্ছে...</p>
@@ -99,26 +131,60 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
       <div className="flex flex-col gap-4">
         {transcript && (
           <div className="card fade-up bg-teal-50 ring-teal-200">
-            <p className="text-sm font-semibold text-teal-800">🎙️ AI যা শুনেছে</p>
+            <p className="text-sm font-semibold text-teal-800">
+              <Mic className="inline size-4 align-[-2px]" aria-hidden /> AI যা
+              শুনেছে
+            </p>
             <p className="mt-1 text-lg">&ldquo;{transcript}&rdquo;</p>
-            {unclear.length > 0 && <p className="mt-2 text-sm text-yellow-800">হলুদ দাগ দেওয়া বিষয়গুলো পরিষ্কার বোঝা যায়নি, একবার দেখে নিন।</p>}
+            {unclear.length > 0 && (
+              <p className="mt-2 text-sm text-yellow-800">
+                হলুদ দাগ দেওয়া বিষয়গুলো পরিষ্কার বোঝা যায়নি, একবার দেখে নিন।
+              </p>
+            )}
           </div>
         )}
         <div className="card fade-up">
-          <h2 className="mb-4 text-xl font-bold">{transcript ? "ঠিক আছে কিনা মিলিয়ে নিন" : "আজকের উপসর্গ বেছে নিন"}</h2>
-          <SymptomEditor value={symptoms} onChange={setSymptoms} highlight={unclear} />
+          <h2 className="mb-4 text-xl font-bold">
+            {transcript ? "ঠিক আছে কিনা মিলিয়ে নিন" : "আজকের উপসর্গ বেছে নিন"}
+          </h2>
+          <SymptomEditor
+            value={symptoms}
+            onChange={setSymptoms}
+            highlight={unclear}
+          />
         </div>
-        {error && <p className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
+        {error && (
+          <p className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>
+        )}
         <div className="flex gap-3">
-          <button className="btn-ghost" onClick={() => { rec.reset(); setStep("speak"); }}>
+          <button
+            className="btn-ghost"
+            onClick={() => {
+              rec.reset();
+              setStep("speak");
+            }}
+          >
             ← আবার বলুন
           </button>
           <button
             className="btn-primary flex-1"
             disabled={save.isPending}
-            onClick={() => save.mutate({ patientId, source, transcript: transcript ?? undefined, symptoms })}
+            onClick={() =>
+              save.mutate({
+                patientId,
+                source,
+                transcript: transcript ?? undefined,
+                symptoms,
+              })
+            }
           >
-            {save.isPending ? "ঝুঁকি যাচাই হচ্ছে..." : "✓ নিশ্চিত করুন ও ফলাফল দেখুন"}
+            {save.isPending ? (
+              "ঝুঁকি যাচাই হচ্ছে..."
+            ) : (
+              <>
+                <Check className="size-5" aria-hidden /> নিশ্চিত করুন ও ফলাফল দেখুন
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -144,24 +210,42 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
           className={`relative flex h-36 w-36 items-center justify-center rounded-full text-6xl text-white shadow-xl transition active:scale-95 ${recording ? "bg-red-600" : "bg-teal-700 hover:bg-teal-800"}`}
         >
           {recording && (
-            <span className="absolute inset-0 rounded-full bg-red-500/40" style={{ transform: `scale(${1 + rec.level * 0.6})`, transition: "transform 80ms" }} />
+            <span
+              className="absolute inset-0 rounded-full bg-red-500/40"
+              style={{
+                transform: `scale(${1 + rec.level * 0.6})`,
+                transition: "transform 80ms",
+              }}
+            />
           )}
-          <span className="relative">{recording ? "■" : "🎙️"}</span>
+          <span className="relative">
+            {recording ? (
+              <Square className="size-12 fill-current" aria-hidden />
+            ) : (
+              <Mic className="size-16" aria-hidden />
+            )}
+          </span>
         </button>
         <p className="text-xl font-bold">
-          {recording ? `বলছেন... ${toBn(rec.elapsed)} / ${toBn(MAX_RECORD_SECONDS)} সেকেন্ড` : "চাপ দিয়ে বলা শুরু করুন"}
+          {recording
+            ? `বলছেন... ${toBn(rec.elapsed)} / ${toBn(MAX_RECORD_SECONDS)} সেকেন্ড`
+            : "চাপ দিয়ে বলা শুরু করুন"}
         </p>
         {recording && <p className="text-slate-500">শেষ হলে আবার চাপ দিন</p>}
       </div>
 
-      {(error ?? rec.error) && <p className="rounded-xl bg-red-50 p-3 text-red-700">{error ?? rec.error}</p>}
+      {(error ?? rec.error) && (
+        <p className="rounded-xl bg-red-50 p-3 text-red-700">
+          {error ?? rec.error}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <button className="btn-outline" onClick={() => setShowType((v) => !v)}>
-          ⌨️ লিখে জানান
+          <Keyboard className="size-5" aria-hidden /> লিখে জানান
         </button>
         <button className="btn-outline" onClick={openForm}>
-          ☑️ চাপ দিয়ে জানান
+          <ListChecks className="size-5" aria-hidden /> চাপ দিয়ে জানান
         </button>
       </div>
 
@@ -177,7 +261,11 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
           />
           <div className="flex flex-wrap gap-2">
             {EXAMPLES.map((ex) => (
-              <button key={ex} onClick={() => setTyped(ex)} className="rounded-full bg-slate-100 px-3 py-1 text-left text-sm hover:bg-slate-200">
+              <button
+                key={ex}
+                onClick={() => setTyped(ex)}
+                className="min-h-11 rounded-full bg-slate-100 px-3 py-1 text-left text-sm transition-colors hover:bg-slate-200"
+              >
                 {ex}
               </button>
             ))}
@@ -196,7 +284,10 @@ export function CheckinFlow({ patientId, dayOfFever }: { patientId: string; dayO
         </div>
       )}
 
-      <Link href={`/p/${patientId}`} className="text-center text-slate-500 underline">
+      <Link
+        href={`/p/${patientId}`}
+        className="text-center text-slate-500 underline"
+      >
         বাতিল
       </Link>
     </div>
