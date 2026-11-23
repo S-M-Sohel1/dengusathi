@@ -91,6 +91,7 @@ export default async function PatientPage({
           reasons={latest.reasons as unknown as Reason[]}
           updatedAt={latest.createdAt}
           hospitalsHref={`/p/${id}/hospitals`}
+          handoffHref={`/p/${id}/handoff`}
           autoPlay={!!updated}
         />
       )}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AiProgress } from "~/app/_components/ai-progress";
 import { Steps } from "~/app/_components/steps";
 import { SymptomEditor } from "~/app/_components/symptom-editor";
 import { VoiceVisualizer } from "~/app/_components/voice-visualizer";
@@ -113,22 +114,30 @@ export function CheckinFlow({
     return (
       <div className="flex flex-col gap-4">
         <Steps steps={STEP_LABELS} current={1} />
-        <div className="card flex flex-col items-center gap-4 py-12 text-center">
-          <div className="flex h-16 items-end gap-1.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <span
-                key={i}
-                className="w-3 rounded-full bg-teal-600"
-                style={{
-                  height: "100%",
-                  animation: `wave 0.9s ${i * 0.12}s ease-in-out infinite`,
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-xl font-bold">AI আপনার কথা বুঝে নিচ্ছে...</p>
-          <p className="text-slate-600">সাধারণত ৫-১৫ সেকেন্ড লাগে</p>
-        </div>
+        <AiProgress
+          title="AI আপনার কথা বুঝছে"
+          stages={[
+            "কথা পাঠানো হচ্ছে",
+            "বাংলা কথা লেখায় রূপান্তর",
+            "উপসর্গ খুঁজে বের করা",
+          ]}
+        />
+      </div>
+    );
+
+  // While the risk check runs (and while navigating to the result), show what is being checked.
+  if (save.isPending || save.isSuccess)
+    return (
+      <div className="flex flex-col gap-4">
+        <Steps steps={STEP_LABELS} current={2} />
+        <AiProgress
+          title="ঝুঁকি যাচাই হচ্ছে"
+          stages={[
+            "WHO সতর্কসংকেত নিয়ম যাচাই",
+            "AI দিয়ে কয়েক দিনের ট্রেন্ড দেখা",
+            "বাংলায় পরামর্শ তৈরি",
+          ]}
+        />
       </div>
     );
 

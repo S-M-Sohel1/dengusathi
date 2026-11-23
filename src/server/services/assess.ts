@@ -6,11 +6,17 @@ import { combine } from "~/lib/risk/score";
 import { evaluateRules } from "~/lib/risk/who-rules";
 import { db } from "~/server/db";
 
+/** Max time to wait for the optional AI risk review before falling back to rules only. */
+const AI_REVIEW_BUDGET_MS = 10_000;
+
 /**
  * Re-run the risk engine for a patient and store a RiskAssessment.
- * Rules always run; the AI review is best-effort (if it fails, rules + static advice are used).
+ * Rules always run; the AI review is best-effort (if it fails or is slow, rules + static advice are used).
  */
-export async function reassessPatient(patientId: string, opts: { useAi?: boolean } = {}) {
+export async function reassessPatient(
+  patientId: string,
+  opts: { useAi?: boolean } = {},
+) {
   const patient = await db.patient.findUniqueOrThrow({
     where: { id: patientId },
     include: {
@@ -24,7 +30,10 @@ export async function reassessPatient(patientId: string, opts: { useAi?: boolean
   const rule = evaluateRules({
     patient,
     latestCheckIn: latest
-      ? { createdAt: latest.createdAt, symptoms: symptomsSchema.parse(latest.symptoms) }
+      ? {
+          createdAt: latest.createdAt,
+          symptoms: symptomsSchema.parse(latest.symptoms),
+        }
       : null,
     labs: patient.labs,
     now,
@@ -47,10 +56,33 @@ export async function reassessPatient(patientId: string, opts: { useAi?: boolean
         wbcUl: l.wbcUl,
       })),
     };
+    // The AI review is a best-effort second opinion (rules already decided the minimum status),
+    // so never let a slow free-tier model hold the family's result hostage: give it AI_REVIEW_BUDGET_MS.
     try {
-      ai = (await reviewRisk(timeline, { status: rule.status, reasons: rule.reasons })).value;
+      const review = reviewRisk(timeline, {
+        status: rule.status,
+        reasons: rule.reasons,
+      });
+      review.catch(() => undefined); // if we time out, a late rejection must not crash the process
+      ai = (
+        await Promise.race([
+          review,
+          new Promise<never>((_, reject) =>
+            setTimeout(
+              () =>
+                reject(
+                  new Error(`AI review exceeded ${AI_REVIEW_BUDGET_MS} ms`),
+                ),
+              AI_REVIEW_BUDGET_MS,
+            ),
+          ),
+        ])
+      ).value;
     } catch (err) {
-      console.warn("[assess] AI review failed, using rules only:", err);
+      console.warn(
+        "[assess] AI review skipped, using rules + standard advice:",
+        err instanceof Error ? err.message : err,
+      );
     }
   }
 
@@ -65,5 +97,10 @@ export async function reassessPatient(patientId: string, opts: { useAi?: boolean
       adviceBn: final.adviceBn,
     },
   });
-  return { ...saved, reasons: final.reasons, dayOfFever: rule.dayOfFever, inCriticalPhase: rule.inCriticalPhase };
+  return {
+    ...saved,
+    reasons: final.reasons,
+    dayOfFever: rule.dayOfFever,
+    inCriticalPhase: rule.inCriticalPhase,
+  };
 }

@@ -6,12 +6,13 @@
 2. `pnpm demo:reset` (puts the demo patient রহিম (ডেমো) back on fever day 4 with days 1 to 3 green).
 3. Open these tabs once so the free database and AI cache are warm:
    - `/` home, `/how-it-works`, `/p/demo-rahim`, `/dashboard`
-4. Do one full rehearsal with the exact sentence and sample report below, then run `pnpm demo:reset` again.
+4. `node scripts/warm-demo.mjs https://<your-app>.vercel.app` (or without a URL for localhost): pre-caches the 3 example sentences and all sample reports. Run it twice; the second run should show "already cached" everywhere.
+5. Do one full rehearsal with the exact sentence and sample report below, then run `pnpm demo:reset` again.
    The AI answers are cached by input, so on stage the same sentence and the same sample image return instantly
    even if the free Gemini tier is slow. A new voice recording is never cached, so typing the sentence is the
    safest path; speaking is the impressive one.
-5. Phone on mobile hotspot, laptop on the same hotspot. Have the backup screen recording ready.
-6. Print `public/samples/cbc/demo-day4-shapla.pdf` to hold up on stage (it is marked SAMPLE).
+6. Phone on mobile hotspot, laptop on the same hotspot. Have the backup screen recording ready.
+7. Print `public/samples/cbc/demo-day4-shapla.pdf` to hold up on stage (it is marked SAMPLE).
 
 ## On stage
 
@@ -23,7 +24,8 @@
 | 1:10 | **আজকের আপডেট** → mic → say: *"জ্বর কমে গেছে কিন্তু পেটে খুব ব্যথা, আজকে দুইবার বমি করছে"* (backup: ⌨️ লিখে জানান → tap the first example) | "The mother just speaks Bangla. Gemini turns it into symptoms. She checks them." |
 | 1:40 | Confirm → status turns **RED**, Bangla audio plays | "The WHO warning-sign rules decide. The AI can only raise the risk, never lower it. Every reason is labelled: WHO rule or AI." |
 | 2:10 | **CBC রিপোর্ট** → 📄 নমুনা রিপোর্ট → *Demo patient, fever day 4* (or photograph the printout) | "She photographs the CBC. The AI reads platelets 45,000 and haematocrit 46, up 21% from day 2. Units are converted in code, impossible values are rejected." |
-| 2:40 | Confirm → trend chart drops, more red reasons → **নিকটস্থ হাসপাতাল দেখুন** | "Nearest government hospitals, directions, 999." |
+| 2:40 | Confirm → trend chart drops, more red reasons → **ডাক্তারের জন্য সারাংশ** | "And this is what changes the outcome: the family walks into the emergency room with a one-page clinical summary. Four days of symptoms, the platelet and haematocrit trend, every warning sign with a timestamp, in English for the doctor, plus a QR code for the live record. The doctor sees plasma leakage in five seconds instead of a panicked family trying to remember." |
+| 3:00 | Back → **নিকটস্থ হাসপাতাল দেখুন** | "Nearest government hospitals, directions, 999." |
 | 3:10 | `/dashboard` | "Hospitals see an anonymised area view. Sonapur has a spike: about 2 times its usual severe cases. They can prepare beds 48 hours early." |
 | 3:40 | Close | "No diagnosis, no prescription: only when to go to hospital. Bangla voice, works for families who can't read lab reports. Built entirely on free tiers." |
 

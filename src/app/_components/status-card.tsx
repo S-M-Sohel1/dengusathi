@@ -6,6 +6,7 @@ import type { Reason, Status } from "~/lib/risk/who-rules";
 import { STATUS_META } from "~/lib/status-meta";
 import {
   CircleCheck,
+  ClipboardList,
   Hospital,
   Siren,
   TriangleAlert,
@@ -18,6 +19,7 @@ export function StatusCard({
   reasons,
   updatedAt,
   hospitalsHref,
+  handoffHref,
   autoPlay = false,
   compact = false,
 }: {
@@ -26,6 +28,8 @@ export function StatusCard({
   reasons: Reason[];
   updatedAt?: Date;
   hospitalsHref?: string;
+  /** Doctor-facing one-page summary (shown for YELLOW/RED) */
+  handoffHref?: string;
   autoPlay?: boolean;
   compact?: boolean;
 }) {
@@ -94,7 +98,7 @@ export function StatusCard({
                 <span className="mt-0.5">•</span>
                 <span className="flex-1">{r.textBn}</span>
                 <span className="shrink-0 rounded bg-white/25 px-1.5 text-[11px] font-semibold">
-                  {r.source === "ai" ? "AI" : "WHO নিয়ম"}
+                  {r.source === "ai" ? "AI" : "নিয়ম"}
                 </span>
               </li>
             ))}
@@ -106,6 +110,15 @@ export function StatusCard({
             className={`mt-4 flex items-center justify-center gap-2 rounded-2xl bg-white py-3 text-lg font-bold ${meta.text}`}
           >
             <Hospital className="size-5" aria-hidden /> নিকটস্থ হাসপাতাল দেখুন
+          </Link>
+        )}
+        {handoffHref && status !== "GREEN" && (
+          <Link
+            href={handoffHref}
+            className="mt-2 flex min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-white/70 py-2.5 font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            <ClipboardList className="size-5" aria-hidden /> ডাক্তারের জন্য সারাংশ
+            (সাথে নিন)
           </Link>
         )}
         {updatedAt && (

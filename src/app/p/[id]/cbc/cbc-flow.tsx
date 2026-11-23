@@ -3,17 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { AiProgress } from "~/app/_components/ai-progress";
 import { Steps } from "~/app/_components/steps";
+import { blobToBase64 } from "~/lib/audio/toWav";
 import { compressImage } from "~/lib/image/compress";
 import { api } from "~/trpc/react";
-import {
-  Camera,
-  Check,
-  FileText,
-  FlaskConical,
-  PenLine,
-  ScanLine,
-} from "lucide-react";
+import { Camera, Check, FileText, FlaskConical, PenLine } from "lucide-react";
 
 interface Sample {
   id: string;
@@ -105,6 +100,8 @@ export function CbcFlow({
   });
   const [error, setError] = useState<string | null>(null);
   const [showSamples, setShowSamples] = useState(false);
+  // Sample reports carry fictional printed dates; never use them as the result date.
+  const [fromSample, setFromSample] = useState(false);
 
   const extract = api.cbc.extract.useMutation({
     onSuccess: ({ raw, values: v }) => {
@@ -132,6 +129,7 @@ export function CbcFlow({
       });
       // Use the printed report date only if it fits this illness (not before the fever, not in the future).
       if (
+        !fromSample &&
         raw.reportDate &&
         raw.reportDate >= feverStartIso.slice(0, 10) &&
         raw.reportDate <= todayIso()
@@ -153,6 +151,7 @@ export function CbcFlow({
   });
 
   const handleFile = async (file: File) => {
+    setFromSample(false);
     setError(null);
     setValues(null);
     setNotes({ rejected: [], lowConfidence: false, notCbc: false, lab: null });
@@ -167,9 +166,18 @@ export function CbcFlow({
 
   const loadSample = async (id: string) => {
     setShowSamples(false);
+    setFromSample(true);
+    setDate(todayIso());
     const res = await fetch(`/samples/cbc/${id}-photo.png`);
     const blob = await res.blob();
-    await handleFile(new File([blob], `${id}.png`, { type: blob.type }));
+    // Send the sample exactly as stored (no re-compression): identical bytes -> AI cache hit,
+    // so the stage demo answers instantly even if the free AI tier is slow (see scripts/warm-demo.mjs).
+    setError(null);
+    setValues(null);
+    setNotes({ rejected: [], lowConfidence: false, notCbc: false, lab: null });
+    const base64 = await blobToBase64(blob);
+    setPreview(`data:image/png;base64,${base64}`);
+    extract.mutate({ imageBase64: base64, mimeType: "image/png" });
   };
 
   const fieldError = (f: (typeof FIELDS)[number], v: string) => {
@@ -181,6 +189,21 @@ export function CbcFlow({
   };
   const anyValue = values && Object.values(values).some((v) => v !== "");
   const anyError = values && FIELDS.some((f) => fieldError(f, values[f.key]));
+
+  if (save.isPending || save.isSuccess)
+    return (
+      <div className="flex flex-col gap-4">
+        <Steps steps={["ছবি দিন", "মিলিয়ে নিন", "ফলাফল"]} current={2} />
+        <AiProgress
+          title="ঝুঁকি যাচাই হচ্ছে"
+          stages={[
+            "প্লাটিলেট ও হেমাটোক্রিটের ট্রেন্ড হিসাব",
+            "WHO সতর্কসংকেত নিয়ম যাচাই",
+            "বাংলায় পরামর্শ তৈরি",
+          ]}
+        />
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-4">
@@ -262,15 +285,23 @@ export function CbcFlow({
             className={`max-h-72 w-full object-contain ${extract.isPending ? "opacity-60" : ""}`}
           />
           {extract.isPending && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-teal-200 border-t-teal-700" />
-              <p className="text-lg font-bold text-teal-800">
-                <ScanLine className="inline size-5 align-[-3px]" aria-hidden />{" "}
-                AI রিপোর্ট পড়ছে...
-              </p>
-            </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-1 animate-[scan_1.8s_ease-in-out_infinite] bg-teal-500 shadow-[0_0_18px_6px_rgba(20,184,166,.55)]"
+            />
           )}
         </div>
+      )}
+
+      {extract.isPending && (
+        <AiProgress
+          title="AI রিপোর্ট পড়ছে"
+          stages={[
+            "ছবি পাঠানো হচ্ছে",
+            "রিপোর্টের ফলাফল কলাম পড়া",
+            "একক রূপান্তর ও সংখ্যা যাচাই",
+          ]}
+        />
       )}
 
       {notes.notCbc && (

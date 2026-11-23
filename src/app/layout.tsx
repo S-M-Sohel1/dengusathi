@@ -36,7 +36,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
         <a
           href="#main"
-          className="sr-only z-[2000] rounded-xl bg-white px-4 py-3 font-semibold text-teal-800 shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+          className="sr-only z-[2000] rounded-xl bg-white px-4 py-3 font-semibold text-teal-800 shadow-lg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 print:hidden"
         >
           মূল অংশে যান
         </a>

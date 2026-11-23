@@ -4,6 +4,7 @@ AI-powered Bangla voice assistant for home monitoring of dengue patients. Team P
 
 - Proposal: `docs/proposal/`
 - Implementation plan and known barriers: `docs/IMPLEMENTATION_PLAN.md`
+- Clinical rule review sheet for a doctor: `docs/DOCTOR_REVIEW.md`
 - **Demo script (read before presenting): `docs/DEMO_SCRIPT.md`**
 - AI validation results: `docs/VALIDATION_REPORT.md`
 
@@ -17,6 +18,7 @@ AI-powered Bangla voice assistant for home monitoring of dengue patients. Team P
 | Daily check-in: Bangla voice, typed text, or tap form, then confirm | `/p/[id]/checkin` |
 | CBC report photo → AI-read values → confirm | `/p/[id]/cbc` |
 | Nearest hospitals map, directions, 999 | `/p/[id]/hospitals` |
+| One-page clinical handoff for the emergency doctor (English, QR, printable) | `/p/[id]/handoff` |
 | Hospital / upazila dashboard with spike detection | `/dashboard` |
 | Auto-playing "how it works" walkthrough | `/how-it-works` |
 | Demo patient | `/p/demo-rahim` |
@@ -49,6 +51,7 @@ Phone testing needs HTTPS for mic and camera: deploy to Vercel or run `cloudflar
 | `pnpm db:seed` | ~280 synthetic patients over 21 days + Sonapur spike + demo patient |
 | `pnpm demo:reset` | re-create only the demo patient (run right before presenting) |
 | `pnpm samples:cbc` | regenerate the synthetic CBC report images/PDFs in `public/samples/cbc/` |
+| `node scripts/warm-demo.mjs [url]` | pre-cache the demo sentences and sample reports (instant AI answers on stage) |
 | `node scripts/validate-ai.mjs` | end-to-end AI validation against the running app → `docs/VALIDATION_REPORT.md` |
 | `node scripts/data/fetch-hospitals.mjs` | refresh hospital list from OpenStreetMap |
 | `node scripts/data/make-alert-audio.mjs` | regenerate the spoken Bangla alerts (Gemini TTS) |

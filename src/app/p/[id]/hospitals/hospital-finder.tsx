@@ -7,7 +7,7 @@ import type { MapPoint } from "~/app/_components/leaflet-map";
 import { directionsUrl } from "~/lib/geo";
 import { toBn } from "~/lib/symptom-labels";
 import { api } from "~/trpc/react";
-import { MapPin, Navigation, Phone } from "lucide-react";
+import { ClipboardList, MapPin, Navigation, Phone } from "lucide-react";
 
 const LeafletMap = dynamic(() => import("~/app/_components/leaflet-map"), {
   ssr: false,
@@ -93,6 +93,13 @@ export function HospitalFinder({
               স্বাস্থ্য বাতায়ন ১৬২৬৩
             </a>
           </div>
+          <Link
+            href={`/p/${patientId}/handoff`}
+            className="btn mt-2 w-full border-2 border-white/70 text-white hover:bg-white/10"
+          >
+            <ClipboardList className="size-5" aria-hidden /> ডাক্তারের জন্য সারাংশ
+            দেখান
+          </Link>
         </div>
       )}
 

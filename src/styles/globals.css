@@ -115,6 +115,21 @@
   );
 }
 
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
 .leaflet-container {
   font-family: inherit;
+}
+
+@keyframes scan {
+  0%,
+  100% {
+    top: 0%;
+  }
+  50% {
+    top: calc(100% - 4px);
+  }
 }
