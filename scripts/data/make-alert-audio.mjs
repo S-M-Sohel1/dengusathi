@@ -28,7 +28,9 @@ for (const [name, text] of Object.entries(TEXTS)) {
       method: "POST",
       headers: { "x-goog-api-key": env.GEMINI_API_KEY, "content-type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Say calmly and clearly in Bangla, like a caring nurse: ${text}` }] }],
+        // Send ONLY the words to be spoken. TTS models read any instruction text aloud
+        // (an earlier "Say calmly ... like a caring nurse:" prefix ended up in the audio).
+        contents: [{ parts: [{ text }] }],
         generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } } },
       }),
     }).catch((e) => ({ ok: false, status: e.message, json: async () => ({}) }));
@@ -42,4 +44,20 @@ for (const [name, text] of Object.entries(TEXTS)) {
     break;
   }
   if (!done) console.warn(`✗ ${name}: no TTS model worked; the app will use the browser voice`);
+}
+
+/* ---- Verify: transcribe each file and make sure only the Bangla alert text is spoken ---- */
+for (const [name, text] of Object.entries(TEXTS)) {
+  let audio;
+  try { audio = readFileSync(`public/audio/${name}.wav`).toString("base64"); } catch { continue; }
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL || "gemini-3.5-flash-lite"}:generateContent`, {
+    method: "POST",
+    headers: { "x-goog-api-key": env.GEMINI_API_KEY, "content-type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ inlineData: { mimeType: "audio/wav", data: audio } }, { text: "Transcribe this audio exactly. Output only the transcript." }] }] }),
+  }).catch(() => null);
+  const heard = (await res?.json().catch(() => null))?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  const latin = (heard.match(/[A-Za-z]{3,}/g) ?? []).join(" ");
+  console.log(`${latin ? "✗" : "✓"} ${name}: heard "${heard.slice(0, 90)}${heard.length > 90 ? "…" : ""}"${latin ? `  <- unexpected English: ${latin}` : ""}`);
+  if (!heard) console.log(`  (could not transcribe ${name}; listen to it manually)`);
+  void text;
 }
