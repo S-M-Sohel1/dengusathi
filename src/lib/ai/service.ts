@@ -48,7 +48,10 @@ async function withFallback<T>(
     };
     const lose = (err: unknown, who: string) => {
       lastErr = err;
-      console.warn(`[ai:${label}] ${who} failed:`, err instanceof Error ? err.message : err);
+      console.warn(
+        `[ai:${label}] ${who} failed:`,
+        err instanceof Error ? err.message : err,
+      );
       pending--;
       if (who === "Gemini") startBackup();
       if (pending === 0 && !settled) {
@@ -60,14 +63,23 @@ async function withFallback<T>(
       if (backupStarted || settled || !canFallback || !fallback) return;
       backupStarted = true;
       pending++;
-      fallback().then((v) => win(v, "groq"), (e) => lose(e, "Groq"));
+      fallback().then(
+        (v) => win(v, "groq"),
+        (e) => lose(e, "Groq"),
+      );
     };
 
     const timer = setTimeout(() => {
-      if (!settled && canFallback) console.warn(`[ai:${label}] Gemini slow (>${HEDGE_AFTER_MS / 1000}s), starting Groq in parallel`);
+      if (!settled && canFallback)
+        console.warn(
+          `[ai:${label}] Gemini slow (>${HEDGE_AFTER_MS / 1000}s), starting Groq in parallel`,
+        );
       startBackup();
     }, HEDGE_AFTER_MS);
-    primary().then((v) => win(v, "gemini"), (e) => lose(e, "Gemini"));
+    primary().then(
+      (v) => win(v, "gemini"),
+      (e) => lose(e, "Gemini"),
+    );
   });
 }
 
@@ -83,9 +95,19 @@ export async function extractVoice(audioBase64: string, mimeType: string) {
           files: [{ data: audioBase64, mimeType }],
         }),
       async () => {
-        const ext = mimeType.includes("wav") ? "wav" : mimeType.includes("mp4") ? "m4a" : "webm";
-        const transcript = await groqTranscribe(Buffer.from(audioBase64, "base64"), `audio.${ext}`);
-        return groqJson({ prompt: VOICE_TEXT_EXTRACTION_PROMPT(transcript), schema: voiceExtractionSchema });
+        const ext = mimeType.includes("wav")
+          ? "wav"
+          : mimeType.includes("mp4")
+            ? "m4a"
+            : "webm";
+        const transcript = await groqTranscribe(
+          Buffer.from(audioBase64, "base64"),
+          `audio.${ext}`,
+        );
+        return groqJson({
+          prompt: VOICE_TEXT_EXTRACTION_PROMPT(transcript),
+          schema: voiceExtractionSchema,
+        });
       },
     ),
   );
@@ -114,19 +136,25 @@ export async function extractCbc(imageBase64: string, mimeType: string) {
           schema: cbcExtractionSchema,
           files: [{ data: imageBase64, mimeType }],
         }),
-      () =>
-        groqJson({
-          prompt: CBC_EXTRACTION_PROMPT,
-          schema: cbcExtractionSchema,
-          imageDataUrl: `data:${mimeType};base64,${imageBase64}`,
-        }),
+      // Groq vision models only take images, not PDFs: no backup for PDF reports.
+      mimeType === "application/pdf"
+        ? null
+        : () =>
+            groqJson({
+              prompt: CBC_EXTRACTION_PROMPT,
+              schema: cbcExtractionSchema,
+              imageDataUrl: `data:${mimeType};base64,${imageBase64}`,
+            }),
     ),
   );
 }
 
 /** AI second opinion on the whole timeline. Caller must enforce "AI can only raise". */
 export async function reviewRisk(timeline: unknown, ruleResult: unknown) {
-  const prompt = RISK_REVIEW_PROMPT(JSON.stringify(timeline), JSON.stringify(ruleResult));
+  const prompt = RISK_REVIEW_PROMPT(
+    JSON.stringify(timeline),
+    JSON.stringify(ruleResult),
+  );
   return cached(["risk-v1", prompt], () =>
     withFallback<AiRisk>(
       "risk",

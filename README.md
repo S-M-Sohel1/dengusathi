@@ -15,9 +15,10 @@ AI-powered Bangla voice assistant for home monitoring of dengue patients. Team P
 |---|---|
 | Landing | `/` |
 | New patient (no login) | `/new` |
-| Patient home: status, fever-day timeline, daily fluid tracker, platelet/HCT trend, history | `/p/[id]` |
+| Patient home: status, fever-day timeline, today's checklist, daily fluid tracker, platelet/HCT trend, history | `/p/[id]` |
+| Calendar reminders (twice daily through fever day 7), add to phone calendar | `/p/[id]/reminders.ics` |
 | Daily check-in: Bangla voice, typed text, or tap form, then confirm | `/p/[id]/checkin` |
-| CBC report photo → AI-read values → confirm | `/p/[id]/cbc` |
+| CBC report: camera photo, gallery image or PDF → AI-read values → confirm | `/p/[id]/cbc` |
 | Nearest hospitals map, directions, 999 | `/p/[id]/hospitals` |
 | One-page clinical handoff for the emergency doctor (English, QR, printable) | `/p/[id]/handoff` |
 | Hospital / upazila dashboard with spike detection | `/dashboard` |

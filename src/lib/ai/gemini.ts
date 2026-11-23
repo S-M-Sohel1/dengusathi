@@ -39,13 +39,26 @@ export async function geminiJson<T extends z.ZodTypeAny>(opts: {
   );
   let lastErr: unknown;
   for (const model of models) {
-    try {
-      return await callModel(model, opts, jsonSchema);
-    } catch (err) {
-      lastErr = err;
-      // Only overload / rate-limit errors are worth retrying on another Gemini model.
-      if (!isRetryable(err)) throw err;
-      console.warn(`[gemini] ${model} unavailable, trying next model`);
+    // "High demand" 503 spikes on the free tier usually clear within a second, so give each
+    // model one quick retry before moving on. Quota errors (429) are not retried on the same model.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await callModel(model, opts, jsonSchema);
+      } catch (err) {
+        lastErr = err;
+        // Only overload / rate-limit errors are worth retrying.
+        if (!isRetryable(err)) throw err;
+        const overloaded = /\b503\b|UNAVAILABLE|high demand/i.test(
+          String((err as Error)?.message ?? err),
+        );
+        if (attempt === 1 && overloaded) {
+          console.warn(`[gemini] ${model} overloaded, retrying once`);
+          await new Promise((r) => setTimeout(r, 900));
+          continue;
+        }
+        console.warn(`[gemini] ${model} unavailable, trying next model`);
+        break;
+      }
     }
   }
   throw lastErr;
@@ -53,7 +66,8 @@ export async function geminiJson<T extends z.ZodTypeAny>(opts: {
 
 function isRetryable(err: unknown): boolean {
   const status = (err as { status?: number })?.status;
-  if (status === 429 || status === 500 || status === 503 || status === 504) return true;
+  if (status === 429 || status === 500 || status === 503 || status === 504)
+    return true;
   const msg = err instanceof Error ? `${err.name} ${err.message}` : String(err);
   return /"code":\s*(429|500|503|504)|RESOURCE_EXHAUSTED|UNAVAILABLE|DEADLINE|high demand|timeout|timed out|abort/i.test(
     msg,
@@ -62,7 +76,12 @@ function isRetryable(err: unknown): boolean {
 
 async function callModel<T extends z.ZodTypeAny>(
   model: string,
-  opts: { prompt: string; schema: T; files?: InlineFile[]; temperature?: number },
+  opts: {
+    prompt: string;
+    schema: T;
+    files?: InlineFile[];
+    temperature?: number;
+  },
   jsonSchema: unknown,
 ): Promise<z.infer<T>> {
   const res = await getClient().models.generateContent({

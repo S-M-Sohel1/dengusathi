@@ -1,6 +1,7 @@
 "use client";
 
 import { CupSoda, Droplets, GlassWater, Undo2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { toBn } from "~/lib/bn";
 import { formatMl } from "~/lib/fluids";
 import { api } from "~/trpc/react";
@@ -77,7 +78,12 @@ export function FluidTracker({
 }) {
   const utils = api.useUtils();
   const q = api.fluid.today.useQuery({ patientId });
-  const refresh = () => utils.fluid.today.invalidate({ patientId });
+  const router = useRouter();
+  // also refresh server-rendered parts of the page (the "আজকের করণীয়" checklist)
+  const refresh = async () => {
+    await utils.fluid.today.invalidate({ patientId });
+    router.refresh();
+  };
   const add = api.fluid.add.useMutation({ onSuccess: refresh });
   const undo = api.fluid.undo.useMutation({ onSuccess: refresh });
 
@@ -91,7 +97,11 @@ export function FluidTracker({
   const left = Math.max(0, targetMl - totalMl);
 
   return (
-    <section className="card flex flex-col gap-4" aria-labelledby="fluid-title">
+    <section
+      id="fluids"
+      className="card flex scroll-mt-20 flex-col gap-4"
+      aria-labelledby="fluid-title"
+    >
       <div className="flex items-center gap-4">
         <div className="relative">
           <Ring pct={pct} />

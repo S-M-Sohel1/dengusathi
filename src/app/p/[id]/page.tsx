@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FluidTracker } from "~/app/_components/fluid-tracker";
+import { TodayCard } from "~/app/_components/today-card";
+import { fluidTargetMl, startOfDhakaDay } from "~/lib/fluids";
 import { ShareButton } from "~/app/_components/share-button";
 import { StatusCard } from "~/app/_components/status-card";
 import { STATUS_META } from "~/lib/status-meta";
@@ -35,9 +37,17 @@ export default async function PatientPage({
   const latest = patient.assessments[0];
   const day = dayOfFever(patient.feverStart, new Date());
   const critical = day >= 3 && day <= 7;
+  const todayStart = startOfDhakaDay();
   const checkedInToday =
-    patient.checkIns[0] &&
-    Date.now() - patient.checkIns[0].createdAt.getTime() < 20 * 3600e3;
+    !!patient.checkIns[0] && patient.checkIns[0].createdAt >= todayStart;
+  const fluidsMl = patient.fluids.reduce((s, f) => s + f.ml, 0);
+  const fluidsPct = patient.fluids.length
+    ? fluidsMl / fluidTargetMl(patient.ageYears, patient.weightKg).ml
+    : null;
+  const lastLab = patient.labs.at(-1);
+  const hoursSinceLastLab = lastLab
+    ? (Date.now() - lastLab.takenAt.getTime()) / 36e5
+    : null;
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-4 px-4 py-5">
@@ -117,6 +127,14 @@ export default async function PatientPage({
           <span className="text-sm text-slate-500">ছবি তুলে দিন</span>
         </Link>
       </nav>
+
+      <TodayCard
+        patientId={patient.id}
+        dayOfFever={day}
+        checkedInToday={checkedInToday}
+        fluidsPct={fluidsPct}
+        hoursSinceLastLab={hoursSinceLastLab}
+      />
 
       <FluidTracker patientId={patient.id} critical={critical} />
 

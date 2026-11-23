@@ -8,7 +8,14 @@ import { Steps } from "~/app/_components/steps";
 import { blobToBase64 } from "~/lib/audio/toWav";
 import { compressImage } from "~/lib/image/compress";
 import { api } from "~/trpc/react";
-import { Camera, Check, FileText, FlaskConical, PenLine } from "lucide-react";
+import {
+  Camera,
+  Check,
+  FileText,
+  FlaskConical,
+  ImageUp,
+  PenLine,
+} from "lucide-react";
 
 interface Sample {
   id: string;
@@ -70,6 +77,10 @@ const FIELDS: {
   },
 ];
 
+/** Server accepts up to 3,000,000 base64 chars, i.e. about 2.2 MB of file. */
+const MAX_PDF_BYTES = 2_100_000;
+const PDF_PREVIEW = "pdf";
+
 const todayIso = () =>
   new Date(Date.now() + 6 * 3600e3).toISOString().slice(0, 10);
 
@@ -83,6 +94,9 @@ export function CbcFlow({
   samples: Sample[];
 }) {
   const router = useRouter();
+  // Two inputs: the camera (capture) for a fresh photo, and the normal picker for a saved photo,
+  // screenshot, WhatsApp image or PDF report. A single capture input forced the camera on phones.
+  const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [values, setValues] = useState<Values | null>(null);
@@ -100,6 +114,7 @@ export function CbcFlow({
   });
   const [error, setError] = useState<string | null>(null);
   const [showSamples, setShowSamples] = useState(false);
+  const [pdfName, setPdfName] = useState<string | null>(null);
   // Sample reports carry fictional printed dates; never use them as the result date.
   const [fromSample, setFromSample] = useState(false);
 
@@ -156,6 +171,23 @@ export function CbcFlow({
     setValues(null);
     setNotes({ rejected: [], lowConfidence: false, notCbc: false, lab: null });
     try {
+      if (
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf")
+      ) {
+        if (file.size > MAX_PDF_BYTES) {
+          setError(
+            "PDF ফাইলটি খুব বড় (২ MB-এর বেশি)। রিপোর্টের পাতার একটি ছবি বা স্ক্রিনশট দিন।",
+          );
+          return;
+        }
+        const base64 = await blobToBase64(file);
+        setPreview(PDF_PREVIEW);
+        setPdfName(file.name);
+        extract.mutate({ imageBase64: base64, mimeType: "application/pdf" });
+        return;
+      }
+      setPdfName(null);
       const { base64, mimeType } = await compressImage(file);
       setPreview(`data:${mimeType};base64,${base64}`);
       extract.mutate({ imageBase64: base64, mimeType });
@@ -219,12 +251,24 @@ export function CbcFlow({
           <p className="text-lg text-slate-600">
             CBC রিপোর্টটি সমান জায়গায় রেখে, আলোতে, পুরো কাগজের ছবি তুলুন।
           </p>
-          <button
-            className="btn-primary w-full"
-            onClick={() => fileRef.current?.click()}
-          >
-            <Camera className="size-5" aria-hidden /> ছবি তুলুন / গ্যালারি থেকে দিন
-          </button>
+          <div className="grid w-full grid-cols-2 gap-3">
+            <button
+              className="btn-primary"
+              onClick={() => cameraRef.current?.click()}
+            >
+              <Camera className="size-5" aria-hidden /> ছবি তুলুন
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => fileRef.current?.click()}
+            >
+              <ImageUp className="size-5" aria-hidden /> ফাইল / গ্যালারি
+            </button>
+          </div>
+          <p className="-mt-2 text-sm text-slate-600">
+            ফোনে থাকা ছবি, স্ক্রিনশট, WhatsApp-এ পাওয়া রিপোর্ট বা PDF ফাইলও দিতে
+            পারেন।
+          </p>
           <div className="grid w-full grid-cols-2 gap-3">
             <button
               className="btn-outline"
@@ -239,11 +283,24 @@ export function CbcFlow({
         </div>
       )}
       <input
-        ref={fileRef}
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
+        aria-label="ক্যামেরা দিয়ে রিপোর্টের ছবি তুলুন"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void handleFile(f);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        className="hidden"
+        aria-label="ফোন থেকে রিপোর্টের ছবি বা PDF বেছে নিন"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) void handleFile(f);
@@ -278,12 +335,23 @@ export function CbcFlow({
 
       {preview && (
         <div className="card relative overflow-hidden !p-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={preview}
-            alt="রিপোর্টের ছবি"
-            className={`max-h-72 w-full object-contain ${extract.isPending ? "opacity-60" : ""}`}
-          />
+          {preview === PDF_PREVIEW ? (
+            <div
+              className={`flex h-40 flex-col items-center justify-center gap-2 bg-slate-50 ${extract.isPending ? "opacity-60" : ""}`}
+            >
+              <FileText className="size-12 text-red-600" aria-hidden />
+              <p className="max-w-[90%] truncate font-semibold">
+                {pdfName ?? "PDF রিপোর্ট"}
+              </p>
+            </div>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview}
+              alt="রিপোর্টের ছবি"
+              className={`max-h-72 w-full object-contain ${extract.isPending ? "opacity-60" : ""}`}
+            />
+          )}
           {extract.isPending && (
             <div
               aria-hidden

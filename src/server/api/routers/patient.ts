@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { startOfDhakaDay } from "~/lib/fluids";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { reassessPatient } from "~/server/services/assess";
 
@@ -22,16 +23,22 @@ export const patientRouter = createTRPCRouter({
     }),
 
   /** Everything the patient home screen needs. */
-  get: publicProcedure.input(z.object({ id: z.string() })).query(({ ctx, input }) =>
-    ctx.db.patient.findUnique({
-      where: { id: input.id },
-      include: {
-        checkIns: { orderBy: { createdAt: "desc" }, take: 14 },
-        labs: { where: { confirmed: true }, orderBy: { takenAt: "asc" } },
-        assessments: { orderBy: { createdAt: "desc" }, take: 30 },
-      },
-    }),
-  ),
+  get: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) =>
+      ctx.db.patient.findUnique({
+        where: { id: input.id },
+        include: {
+          checkIns: { orderBy: { createdAt: "desc" }, take: 14 },
+          labs: { where: { confirmed: true }, orderBy: { takenAt: "asc" } },
+          assessments: { orderBy: { createdAt: "desc" }, take: 30 },
+          fluids: {
+            where: { createdAt: { gte: startOfDhakaDay() } },
+            select: { ml: true },
+          },
+        },
+      }),
+    ),
 
   reassess: publicProcedure
     .input(z.object({ id: z.string() }))
