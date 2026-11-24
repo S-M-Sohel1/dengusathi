@@ -24,6 +24,7 @@ import { blobToBase64, blobToWav16k } from "~/lib/audio/toWav";
 import { blobToMp3 } from "~/lib/audio/toMp3";
 import { toBn } from "~/lib/symptom-labels";
 import { api } from "~/trpc/react";
+import { friendlyError } from "~/lib/friendly-error";
 import { Check, Keyboard, ListChecks, Mic, Square } from "lucide-react";
 
 type Step = "speak" | "processing" | "confirm";
@@ -84,7 +85,7 @@ export function CheckinFlow({
     setStep("confirm");
   };
   const onFail = (e: { message: string }) => {
-    setError(e.message);
+    setError(friendlyError(e));
     setStep("speak");
   };
   const voice = api.checkin.extractVoice.useMutation({
@@ -101,7 +102,7 @@ export function CheckinFlow({
       router.push(`/p/${patientId}?updated=1`);
       router.refresh();
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(friendlyError(e)),
   });
 
   // When recording finishes: compress to 16 kHz MP3 (WAV if the encoder fails) and send.

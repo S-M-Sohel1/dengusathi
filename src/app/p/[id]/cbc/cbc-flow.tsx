@@ -9,6 +9,7 @@ import { IdentityCheck, OtherPersonNotice } from "~/app/_components/identity-che
 import { blobToBase64 } from "~/lib/audio/toWav";
 import { compressImage } from "~/lib/image/compress";
 import { api } from "~/trpc/react";
+import { friendlyError } from "~/lib/friendly-error";
 import {
   Camera,
   Check,
@@ -168,7 +169,7 @@ export function CbcFlow({
         setDate(raw.reportDate);
     },
     onError: (e) => {
-      setError(e.message);
+      setError(friendlyError(e));
       setValues(EMPTY);
     },
   });
@@ -179,7 +180,7 @@ export function CbcFlow({
       router.push(`/p/${patientId}?updated=1`);
       router.refresh();
     },
-    onError: (e) => setError(e.message),
+    onError: (e) => setError(friendlyError(e)),
   });
 
   const handleFile = async (file: File) => {

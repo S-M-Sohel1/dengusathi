@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AreaPicker, LAST_AREA_KEY } from "./area-picker";
 import { getArea } from "~/lib/areas";
 import { api } from "~/trpc/react";
+import { friendlyError } from "~/lib/friendly-error";
 import { Check } from "lucide-react";
 
 export const STORAGE_KEY = "denguesathi.patientId";
@@ -203,7 +204,7 @@ export function NewPatientForm() {
       </button>
       {create.error && (
         <p className="rounded-xl bg-red-50 p-3 text-red-700">
-          সমস্যা হয়েছে: {create.error.message}
+          {friendlyError(create.error)}
         </p>
       )}
     </form>
