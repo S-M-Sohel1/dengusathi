@@ -27,7 +27,8 @@ Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final de
 | Calendar reminders (.ics, 9 am and 8 pm through fever day 7) | ✅ | `/p/[id]/reminders.ics` |
 | Emergency handoff card for the doctor (English, QR code, lab table with HCT Δ, symptom log, fluids, prints on one A4 page) | ✅ | `/p/[id]/handoff` |
 | Nearest hospitals, nationwide: 2,054 OSM hospitals inside Bangladesh (all 64 districts) + 3 hand-entered Noakhali ones; public/emergency first; warning + 16263 / 999 when the nearest is > 25 km (9 remote upazilas, e.g. Teknaf, Sandwip) | ✅ | `/p/[id]/hospitals`, `scripts/data/fetch-hospitals.mjs` |
-| Staff login: Google (Auth.js v5, JWT cookie, no user tables). Only `/dashboard` and its API need it; allowlist in `STAFF_EMAILS` (empty = any Google account). Families never log in | ✅ | `src/server/auth.ts`, `staffProcedure` |
+| Google login (Auth.js v5, JWT cookie). **Staff:** only emails in `STAFF_EMAILS` open `/dashboard` and its API. **Families (optional):** "save with Google" card under a non-RED result (dismiss = 3 days), "আমার রোগী" on home on any phone, patients opened on the phone auto-linked after sign-in (`PatientAccess` table). Patient pages still open by link without login | ✅ | `src/server/auth.ts`, `account.tsx`, `routers/account.ts` |
+| Gemini key failover: `GEMINI_BACKUP_API_KEYS` (comma list) tried when a key is out of quota (429, 5-min cooldown per model) or rejected; overload still moves to the next model | ✅ | `src/lib/ai/gemini.ts` |
 | Hospital dashboard: upazila ↔ district view, division filter, KPI cards with sparklines, map, 15-day chart, Poisson-aware spike detection per upazila and per district (z ≥ 2, ≥ 3 cases, ≥ 1.5×) | ✅ | `/dashboard` |
 | "How it works" auto-playing walkthrough | ✅ | `/how-it-works` |
 | Staged AI progress (instead of spinners); AI review time budget of 10 s | ✅ | `ai-progress.tsx`, `assess.ts` |

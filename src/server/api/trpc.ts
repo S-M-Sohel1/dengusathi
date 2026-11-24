@@ -10,7 +10,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
-import { getStaff } from "~/server/auth";
+import { getStaff, getUser } from "~/server/auth";
 import { db } from "~/server/db";
 
 /**
@@ -115,4 +115,11 @@ export const staffProcedure = publicProcedure.use(async ({ next }) => {
   if (!staff)
     throw new TRPCError({ code: "UNAUTHORIZED", message: "স্টাফ লগইন প্রয়োজন" });
   return next({ ctx: { staff } });
+});
+
+/** Any signed-in Google user (optional family login). */
+export const userProcedure = publicProcedure.use(async ({ next }) => {
+  const user = await getUser();
+  if (!user) throw new TRPCError({ code: "UNAUTHORIZED", message: "Google দিয়ে লগইন করুন" });
+  return next({ ctx: { user } });
 });

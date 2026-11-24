@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidArea, resolveAreaId } from "~/lib/areas";
+import { getUser } from "~/server/auth";
 import { startOfDhakaDay } from "~/lib/fluids";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { reassessPatient } from "~/server/services/assess";
@@ -23,6 +24,10 @@ export const patientRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const patient = await ctx.db.patient.create({ data: input });
+      // Optional family login: a signed-in creator gets the patient in "আমার রোগী" automatically.
+      const user = await getUser();
+      if (user)
+        await ctx.db.patientAccess.create({ data: { email: user.email, patientId: patient.id } });
       await reassessPatient(patient.id, { useAi: false });
       return patient;
     }),

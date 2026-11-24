@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { STORAGE_KEY } from "~/app/_components/new-patient-form";
+import { rememberPatient } from "~/lib/local-patients";
 import { Check, Share2 } from "lucide-react";
 
 /** Copy the patient link so another family member can open the same patient. Also remembers it on this phone. */
 export function ShareButton({ patientId }: { patientId: string }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY))
-      localStorage.setItem(STORAGE_KEY, patientId);
+    // Opening a shared link remembers the patient on this phone (without replacing the current one).
+    rememberPatient(patientId, { makeCurrent: false });
   }, [patientId]);
 
   const share = async () => {

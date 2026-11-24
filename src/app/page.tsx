@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MyPatients } from "~/app/_components/account";
 import { ContinueCard } from "~/app/_components/continue-card";
 import { FlaskConical, Gauge, Hospital, Mic, Play, Plus } from "lucide-react";
 
@@ -68,6 +69,7 @@ export default function Home() {
           style={{ animationDelay: "120ms" }}
         >
           <ContinueCard />
+          <MyPatients />
           <div className="card flex flex-col gap-2 bg-gradient-to-br from-teal-700 to-teal-900 text-white ring-0">
             <p className="text-sm opacity-80">জ্বরের দিন অনুযায়ী ঝুঁকি</p>
             <div className="flex gap-1">

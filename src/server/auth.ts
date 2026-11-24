@@ -15,14 +15,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
 });
 
-/** STAFF_EMAILS empty = any signed-in Google account (hackathon default); otherwise an allowlist. */
+/**
+ * Staff = emails listed in STAFF_EMAILS, nothing else. Families can sign in with Google too (to keep
+ * their patients across phones), so "any signed-in account" must never mean staff.
+ */
 export function isStaff(email: string | null | undefined): boolean {
   if (!email) return false;
   const list = (env.STAFF_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  return list.length === 0 || list.includes(email.toLowerCase());
+  return list.includes(email.toLowerCase());
+}
+
+/** Any signed-in Google user (family or staff), or null. Never throws. */
+export async function getUser() {
+  if (!authConfigured) return null;
+  try {
+    const session = await auth();
+    const email = session?.user?.email?.toLowerCase();
+    return email ? { email, name: session?.user?.name ?? null, image: session?.user?.image ?? null } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** The signed-in staff member, or null. Never throws (e.g. when login is not configured). */

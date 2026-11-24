@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FluidTracker } from "~/app/_components/fluid-tracker";
 import { TodayCard } from "~/app/_components/today-card";
 import { fluidTargetMl, startOfDhakaDay } from "~/lib/fluids";
+import { SavePrompt } from "~/app/_components/account";
 import { ShareButton } from "~/app/_components/share-button";
 import { StatusCard } from "~/app/_components/status-card";
 import { STATUS_META } from "~/lib/status-meta";
@@ -106,6 +107,8 @@ export default async function PatientPage({
           autoPlay={!!updated}
         />
       )}
+
+      <SavePrompt status={latest?.status ?? null} />
 
       <nav className="grid grid-cols-2 gap-3">
         <Link

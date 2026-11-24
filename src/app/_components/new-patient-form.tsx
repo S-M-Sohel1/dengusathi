@@ -4,11 +4,12 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AreaPicker, LAST_AREA_KEY } from "./area-picker";
 import { getArea } from "~/lib/areas";
+import { rememberPatient } from "~/lib/local-patients";
 import { api } from "~/trpc/react";
 import { friendlyError } from "~/lib/friendly-error";
 import { Check } from "lucide-react";
 
-export const STORAGE_KEY = "denguesathi.patientId";
+export { STORAGE_KEY } from "~/lib/local-patients";
 
 const RISK_OPTIONS = [
   { id: "pregnant", label: "গর্ভবতী" },
@@ -37,7 +38,7 @@ export function NewPatientForm() {
 
   const create = api.patient.create.useMutation({
     onSuccess: (p) => {
-      localStorage.setItem(STORAGE_KEY, p.id);
+      rememberPatient(p.id);
       localStorage.setItem(LAST_AREA_KEY, p.area);
       router.push(`/p/${p.id}`);
     },

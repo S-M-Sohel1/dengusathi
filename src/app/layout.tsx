@@ -3,6 +3,7 @@ import "~/styles/globals.css";
 import { type Metadata, type Viewport } from "next";
 import { Hind_Siliguri } from "next/font/google";
 
+import { AccountSync } from "~/app/_components/account";
 import { AppHeader } from "~/app/_components/app-header";
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         </a>
         <TRPCReactProvider>
           <AppHeader />
+          <AccountSync />
           <div id="main" tabIndex={-1} className="outline-none">
             {children}
           </div>

@@ -10,6 +10,9 @@ export const env = createEnv({
       .default("development"),
     // Google AI Studio key (free tier). Primary model for voice, vision and text.
     GEMINI_API_KEY: z.string().min(1),
+    // Optional comma-separated backup keys (each from a separate Google Cloud project), tried in
+    // order when a key hits its quota (429) or is invalid / revoked.
+    GEMINI_BACKUP_API_KEYS: z.string().optional(),
     // Model IDs change often; list what your key can use with GET /v1beta/models.
     GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
     // Tried in order when the primary model is overloaded (503), rate limited (429) or not found.
@@ -25,7 +28,8 @@ export const env = createEnv({
     AUTH_SECRET: z.string().optional(),
     AUTH_GOOGLE_ID: z.string().optional(),
     AUTH_GOOGLE_SECRET: z.string().optional(),
-    // Comma-separated emails allowed on the dashboard. Empty = any signed-in Google account.
+    // Comma-separated emails allowed on the dashboard (families can also sign in, so this is the
+    // only way to be staff). Empty = nobody.
     STAFF_EMAILS: z.string().optional(),
   },
 
@@ -36,6 +40,7 @@ export const env = createEnv({
     DIRECT_URL: process.env.DIRECT_URL,
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    GEMINI_BACKUP_API_KEYS: process.env.GEMINI_BACKUP_API_KEYS,
     GEMINI_MODEL: process.env.GEMINI_MODEL,
     GEMINI_FALLBACK_MODEL: process.env.GEMINI_FALLBACK_MODEL,
     GROQ_API_KEY: process.env.GROQ_API_KEY,

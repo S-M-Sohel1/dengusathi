@@ -42,6 +42,7 @@ model Patient {
   assessments RiskAssessment[]
   fluids      FluidLog[]
   conflicts   DataConflict[]
+  access      PatientAccess[]
 
   @@index([area])
 }
@@ -123,4 +124,17 @@ model DataConflict {
   resolution String
 
   @@index([patientId, createdAt])
+}
+
+/// Optional family login: which Google accounts saved this patient (several family members may).
+/// Patient pages still open by link without login; this only powers "আমার রোগী" on any phone.
+model PatientAccess {
+  id        String   @id @default(cuid())
+  email     String
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([email, patientId])
+  @@index([email])
 }

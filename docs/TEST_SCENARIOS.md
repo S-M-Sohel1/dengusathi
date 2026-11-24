@@ -113,6 +113,17 @@ Sample reports used below are under CBC → "নমুনা রিপোর্�
 | H4 | Keep the dashboard open on the projector, make a RED check-in on the phone | Within 20 s the RED count goes up (live refresh). |
 | H5 | "সব … দেখুন" ("see all") | Expands the table beyond 12 rows. |
 
+## J. Optional family login (Google)
+
+| # | Steps | Expected |
+|---|---|---|
+| J1 | New patient → first result (GREEN/YELLOW) | Under the status card: **"রোগীর তথ্য হারাবেন না"** card with "Google দিয়ে সেভ করুন" / "পরে". Never shown on a RED result, during check-in or CBC. |
+| J2 | Tap **পরে** | Card disappears and stays hidden for 3 days (also after reload). The app works fully without login. |
+| J3 | Tap **Google দিয়ে সেভ করুন** → sign in | Back on the same patient page; the card becomes "✓ <email> অ্যাকাউন্টে সেভ করা আছে". |
+| J4 | Second phone (or incognito) → home → **"আগে রোগী যোগ করেছেন? Google দিয়ে খুঁজুন"** → sign in with the same account | Home shows **আমার রোগী** with the patient, its fever day, area and status dot. Tap → patient page. |
+| J5 | Signed in, open a shared patient link from WhatsApp | It is added to "আমার রোগী" automatically. |
+| J6 | Sign in with a family account (not in STAFF_EMAILS) → `/dashboard` | "এই অ্যাকাউন্টের অনুমতি নেই": families never see the hospital dashboard. |
+
 ## I. Resilience and honesty checks (good answers to judges)
 
 | # | Steps | Expected |
