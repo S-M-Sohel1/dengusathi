@@ -52,10 +52,41 @@ export const emptySymptoms: Symptoms = {
   dizzyOnStanding: null,
 };
 
+/** One moment of the caregiver's day summary, e.g. { when: "morning", noteBn: "দুইবার বমি" }. */
+export const timelineItemSchema = z.object({
+  when: z.enum(["morning", "noon", "afternoon", "evening", "night", "now", "unspecified"]),
+  noteBn: z.string(),
+});
+export type TimelineItem = z.infer<typeof timelineItemSchema>;
+
+/** Who the speaker says they are describing; used to catch a message about the wrong patient. */
+export const mentionedSchema = z.object({
+  name: z.string().nullable(),
+  ageYears: z.number().nullable(),
+  sex: z.enum(["male", "female"]).nullable(),
+  /** relation to the speaker as said, e.g. "ছেলে", "মা" */
+  relationBn: z.string().nullable(),
+  /** "আজ জ্বরের তিন দিন" -> 3 */
+  feverDay: z.number().int().nullable(),
+  /** the message describes more than one sick person */
+  multiplePatients: z.boolean(),
+});
+export type Mentioned = z.infer<typeof mentionedSchema>;
+export const emptyMentioned: Mentioned = {
+  name: null,
+  ageYears: null,
+  sex: null,
+  relationBn: null,
+  feverDay: null,
+  multiplePatients: false,
+};
+
 export const voiceExtractionSchema = z.object({
   transcriptBn: z.string(),
   symptoms: symptomsSchema,
   unclearFields: z.array(z.string()),
+  timeline: z.array(timelineItemSchema).default([]),
+  mentioned: mentionedSchema.default(emptyMentioned),
 });
 export type VoiceExtraction = z.infer<typeof voiceExtractionSchema>;
 
@@ -70,6 +101,10 @@ export const cbcExtractionSchema = z.object({
   hemoglobinGdl: z.number().nullable(),
   reportDate: z.string().nullable(),
   labName: z.string().nullable(),
+  /** Printed patient identity, used to catch another person's report. */
+  patientName: z.string().nullable().default(null),
+  patientAgeRaw: z.string().nullable().default(null),
+  patientSexRaw: z.string().nullable().default(null),
   confidence: z.enum(["high", "low"]),
 });
 export type CbcExtraction = z.infer<typeof cbcExtractionSchema>;

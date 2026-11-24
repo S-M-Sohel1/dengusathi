@@ -3,6 +3,8 @@
 import type { Symptoms } from "~/lib/ai/schemas";
 import { BOOL_SYMPTOMS, PAIN_LABEL, toBn } from "~/lib/symptom-labels";
 import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { parseTemperatureF } from "~/lib/temperature";
 
 /**
  * Editable symptom form. Used both to confirm what the AI heard and as the tap-only fallback.
@@ -89,19 +91,9 @@ export function SymptomEditor({
         </div>
         <label className={`flex flex-col rounded-2xl ${hl("temperatureF")}`}>
           <span className="mb-2 font-semibold">তাপমাত্রা (°F)</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min={95}
-            max={108}
-            step={0.1}
-            value={value.temperatureF ?? ""}
-            placeholder="যেমন ১০২"
-            onChange={(e) => {
-              const n = e.target.value === "" ? null : Number(e.target.value);
-              set("temperatureF", n != null && n >= 95 && n <= 108 ? n : null);
-            }}
-            className="input"
+          <TemperatureInput
+            value={value.temperatureF}
+            onChange={(f) => set("temperatureF", f)}
           />
         </label>
       </div>
@@ -144,5 +136,52 @@ export function SymptomEditor({
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Free-typing temperature box. Keeps the raw text while typing (so "1" -> "10" -> "102" works),
+ * accepts Bangla digits from a Bangla keyboard, and converts a Celsius reading (35-42) to °F.
+ */
+function TemperatureInput({
+  value,
+  onChange,
+}: {
+  value: number | null;
+  onChange: (f: number | null) => void;
+}) {
+  const [text, setText] = useState(value != null ? String(value) : "");
+  const parsed = parseTemperatureF(text);
+
+  // Sync when the value changes from outside (e.g. the AI filled it in).
+  useEffect(() => {
+    if (value !== parseTemperatureF(text).f) setText(value != null ? String(value) : "");
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      <input
+        type="text"
+        inputMode="decimal"
+        autoComplete="off"
+        value={text}
+        placeholder="যেমন ১০২"
+        aria-invalid={parsed.error != null}
+        onChange={(e) => {
+          setText(e.target.value);
+          const p = parseTemperatureF(e.target.value);
+          onChange(p.f);
+        }}
+        className="input"
+      />
+      {parsed.fromCelsius && parsed.f != null && (
+        <span className="mt-1 text-sm text-slate-600">
+          সেলসিয়াস ধরে নেওয়া হলো = {toBn(parsed.f)}°F
+        </span>
+      )}
+      {parsed.error && text.trim().length >= 3 && (
+        <span className="mt-1 text-sm text-red-600">{parsed.error}</span>
+      )}
+    </>
   );
 }

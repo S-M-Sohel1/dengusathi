@@ -2,6 +2,7 @@
 
 AI-powered Bangla voice assistant for home monitoring of dengue patients. Team Prompt_Pirates, NSTU.
 
+- **Current status and next steps: `docs/PROJECT_STATUS.md`**
 - Proposal: `docs/proposal/`
 - Implementation plan and known barriers: `docs/IMPLEMENTATION_PLAN.md`
 - Clinical rule review sheet for a doctor: `docs/DOCTOR_REVIEW.md`

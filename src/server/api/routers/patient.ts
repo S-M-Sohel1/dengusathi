@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidArea, resolveAreaId } from "~/lib/areas";
 import { startOfDhakaDay } from "~/lib/fluids";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { reassessPatient } from "~/server/services/assess";
@@ -12,7 +13,11 @@ export const patientRouter = createTRPCRouter({
         sex: z.enum(["male", "female", "other"]).optional(),
         weightKg: z.number().min(1).max(250).optional(),
         riskFactors: z.array(z.string()).default([]),
-        area: z.string().min(1),
+        area: z
+          .string()
+          .min(1)
+          .refine(isValidArea, "Unknown area")
+          .transform(resolveAreaId),
         feverStart: z.coerce.date(),
       }),
     )

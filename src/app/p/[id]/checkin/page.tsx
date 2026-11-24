@@ -10,7 +10,7 @@ export default async function CheckinPage({ params }: { params: Promise<{ id: st
   return (
     <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-5">
       <h1 className="text-2xl font-bold">{patient.nickname}: আজকের আপডেট</h1>
-      <CheckinFlow patientId={id} dayOfFever={dayOfFever(patient.feverStart, new Date())} />
+      <CheckinFlow patientId={id} patientName={patient.nickname} dayOfFever={dayOfFever(patient.feverStart, new Date())} />
     </main>
   );
 }

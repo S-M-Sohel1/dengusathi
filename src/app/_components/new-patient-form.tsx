@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AREAS } from "~/lib/areas";
+import { useEffect, useState } from "react";
+import { AreaPicker, LAST_AREA_KEY } from "./area-picker";
+import { getArea } from "~/lib/areas";
 import { api } from "~/trpc/react";
 import { Check } from "lucide-react";
 
@@ -22,14 +23,21 @@ export function NewPatientForm() {
   const [age, setAge] = useState("");
   const [sex, setSex] = useState<"male" | "female" | "">("");
   const [weight, setWeight] = useState("");
-  const [area, setArea] = useState<string>(AREAS[0].id);
+  const [area, setArea] = useState<string | null>(null);
   const [feverDaysAgo, setFeverDaysAgo] = useState("0");
   const [risks, setRisks] = useState<string[]>([]);
   const [touched, setTouched] = useState(false);
 
+  // A family adding a second patient usually lives in the same area.
+  useEffect(() => {
+    const last = localStorage.getItem(LAST_AREA_KEY);
+    if (last && getArea(last)) setArea(last);
+  }, []);
+
   const create = api.patient.create.useMutation({
     onSuccess: (p) => {
       localStorage.setItem(STORAGE_KEY, p.id);
+      localStorage.setItem(LAST_AREA_KEY, p.area);
       router.push(`/p/${p.id}`);
     },
   });
@@ -45,13 +53,14 @@ export function NewPatientForm() {
       weight !== "" && (Number(weight) < 1 || Number(weight) > 250)
         ? "সঠিক ওজন লিখুন (কেজি)"
         : null,
+    area: area ? null : "এলাকা বেছে নিন",
   };
-  const valid = !errors.nickname && !errors.age && !errors.weight;
+  const valid = !errors.nickname && !errors.age && !errors.weight && !errors.area;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    if (!valid) return;
+    if (!valid || !area) return;
     // Fever started N days ago -> today is fever day N+1
     const feverStart = new Date(
       Date.now() - (Number(feverDaysAgo) * 24 + 2) * 3600e3,
@@ -134,23 +143,11 @@ export function NewPatientForm() {
         </div>
       </fieldset>
 
-      <label className="flex flex-col gap-1.5">
-        <span className="font-semibold">এলাকা</span>
-        <select
-          value={area}
-          onChange={(e) => setArea(e.target.value)}
-          className="input"
-        >
-          {AREAS.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nameBn}
-            </option>
-          ))}
-        </select>
-        <span className="text-xs text-slate-500">
-          শুধু এলাকার নাম রাখা হয়, আপনার সঠিক ঠিকানা নয়।
-        </span>
-      </label>
+      <AreaPicker
+        value={area}
+        onChange={setArea}
+        error={touched ? errors.area : null}
+      />
 
       <label className="flex flex-col gap-1.5">
         <span className="font-semibold">জ্বর কবে শুরু হয়েছে?</span>

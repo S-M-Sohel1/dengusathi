@@ -5,22 +5,42 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AiProgress } from "~/app/_components/ai-progress";
 import { Steps } from "~/app/_components/steps";
+import { IdentityCheck, OtherPersonNotice } from "~/app/_components/identity-check";
 import { SymptomEditor } from "~/app/_components/symptom-editor";
 import { VoiceVisualizer } from "~/app/_components/voice-visualizer";
 import {
   MAX_RECORD_SECONDS,
+  RECORD_WARN_SECONDS,
   useRecorder,
 } from "~/app/_components/use-recorder";
-import { emptySymptoms, type Symptoms } from "~/lib/ai/schemas";
+import {
+  emptyMentioned,
+  emptySymptoms,
+  type Mentioned,
+  type Symptoms,
+  type TimelineItem,
+} from "~/lib/ai/schemas";
 import { blobToBase64, blobToWav16k } from "~/lib/audio/toWav";
+import { blobToMp3 } from "~/lib/audio/toMp3";
 import { toBn } from "~/lib/symptom-labels";
 import { api } from "~/trpc/react";
 import { Check, Keyboard, ListChecks, Mic, Square } from "lucide-react";
 
 type Step = "speak" | "processing" | "confirm";
+const WHEN_BN: Record<TimelineItem["when"], string> = {
+  morning: "সকাল",
+  noon: "দুপুর",
+  afternoon: "বিকেল",
+  evening: "সন্ধ্যা",
+  night: "রাত",
+  now: "এখন",
+  unspecified: "আজ",
+};
 const STEP_LABELS = ["বলুন", "মিলিয়ে নিন", "ফলাফল"];
 
 const EXAMPLES = [
+  // A whole-day summary: the morning bleeding must stay even though it "stopped" (-> RED).
+  "সকালে জ্বর ১০৩ ছিল, দুইবার বমি করছে। দুপুরে দাঁত দিয়ে একটু রক্ত পড়ছিল, এখন বন্ধ। বিকেল থেকে জ্বর নেই, পানি খাচ্ছে।",
   "জ্বর কমে গেছে কিন্তু পেটে খুব ব্যথা, আজকে দুইবার বমি করছে",
   "জ্বর ১০২, পানি খাচ্ছে, বমি নেই, পেটে ব্যথা নেই",
   "সকাল থেকে প্রস্রাব হয়নি, খুব ঝিমাচ্ছে, দাঁত দিয়ে রক্ত পড়ছে",
@@ -28,9 +48,11 @@ const EXAMPLES = [
 
 export function CheckinFlow({
   patientId,
+  patientName,
   dayOfFever,
 }: {
   patientId: string;
+  patientName: string;
   dayOfFever: number;
 }) {
   const router = useRouter();
@@ -39,6 +61,8 @@ export function CheckinFlow({
   const [symptoms, setSymptoms] = useState<Symptoms>(emptySymptoms);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [unclear, setUnclear] = useState<string[]>([]);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [mentioned, setMentioned] = useState<Mentioned>(emptyMentioned);
   const [source, setSource] = useState<"VOICE" | "FORM">("VOICE");
   const [typed, setTyped] = useState("");
   const [showType, setShowType] = useState(false);
@@ -48,8 +72,12 @@ export function CheckinFlow({
     transcriptBn: string;
     symptoms: Symptoms;
     unclearFields: string[];
+    timeline: TimelineItem[];
+    mentioned: Mentioned;
   }) => {
     setSymptoms(r.symptoms);
+    setTimeline(r.timeline);
+    setMentioned(r.mentioned);
     setTranscript(r.transcriptBn);
     setUnclear(r.unclearFields);
     setSource("VOICE");
@@ -68,14 +96,15 @@ export function CheckinFlow({
     onError: onFail,
   });
   const save = api.checkin.save.useMutation({
-    onSuccess: () => {
+    onSuccess: (r) => {
+      if (r.outcome !== "saved") return; // held / rejected are shown below
       router.push(`/p/${patientId}?updated=1`);
       router.refresh();
     },
     onError: (e) => setError(e.message),
   });
 
-  // When recording finishes: convert to 16 kHz WAV and send.
+  // When recording finishes: compress to 16 kHz MP3 (WAV if the encoder fails) and send.
   useEffect(() => {
     if (rec.state !== "done" || !rec.blob) return;
     if (rec.elapsed < 1) {
@@ -87,10 +116,15 @@ export function CheckinFlow({
     setError(null);
     void (async () => {
       try {
-        const wav = await blobToWav16k(rec.blob!);
+        let audio: Blob;
+        try {
+          audio = await blobToMp3(rec.blob!);
+        } catch {
+          audio = await blobToWav16k(rec.blob!);
+        }
         voice.mutate({
-          audioBase64: await blobToBase64(wav),
-          mimeType: "audio/wav",
+          audioBase64: await blobToBase64(audio),
+          mimeType: audio.type === "audio/mpeg" ? "audio/mpeg" : "audio/wav",
         });
       } catch {
         onFail({
@@ -105,6 +139,8 @@ export function CheckinFlow({
     setSymptoms(emptySymptoms);
     setTranscript(null);
     setUnclear([]);
+    setTimeline([]);
+    setMentioned(emptyMentioned);
     setSource("FORM");
     setError(null);
     setStep("confirm");
@@ -125,8 +161,46 @@ export function CheckinFlow({
       </div>
     );
 
+  const submit = (identityAnswer?: "same" | "other") =>
+    save.mutate({
+      patientId,
+      source,
+      transcript: transcript ?? undefined,
+      symptoms,
+      mentioned: source === "VOICE" ? mentioned : undefined,
+      identityAnswer,
+    });
+
+  if (save.data?.outcome === "held")
+    return (
+      <div className="flex flex-col gap-4">
+        <Steps steps={STEP_LABELS} current={1} />
+        <IdentityCheck
+          patientName={patientName}
+          what="voice"
+          conflicts={save.data.conflicts}
+          busy={save.isPending}
+          onSame={() => submit("same")}
+          onOther={() => submit("other")}
+        />
+      </div>
+    );
+  if (save.data?.outcome === "rejected")
+    return (
+      <OtherPersonNotice
+        what="voice"
+        dangerIfOther={save.data.dangerIfOther}
+        patientId={patientId}
+        onRetry={() => {
+          save.reset();
+          rec.reset();
+          setStep("speak");
+        }}
+      />
+    );
+
   // While the risk check runs (and while navigating to the result), show what is being checked.
-  if (save.isPending || save.isSuccess)
+  if (save.isPending || save.data?.outcome === "saved")
     return (
       <div className="flex flex-col gap-4">
         <Steps steps={STEP_LABELS} current={2} />
@@ -152,6 +226,26 @@ export function CheckinFlow({
               শুনেছে
             </p>
             <p className="mt-1 text-lg">&ldquo;{transcript}&rdquo;</p>
+            {timeline.length > 1 && (
+              <div className="mt-3 border-t border-teal-200 pt-3">
+                <p className="text-sm font-semibold text-teal-800">
+                  সারা দিনের হিসাব (AI যেভাবে বুঝেছে)
+                </p>
+                <ol className="mt-2 flex flex-col gap-1.5">
+                  {timeline.map((t, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="w-16 shrink-0 rounded-md bg-white px-2 py-0.5 text-center text-sm font-semibold text-teal-800">
+                        {WHEN_BN[t.when]}
+                      </span>
+                      <span>{t.noteBn}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-2 text-xs text-slate-600">
+                  দিনের যেকোনো সময় বিপদচিহ্ন থাকলে, এখন ভালো থাকলেও সেটা ধরা হয়।
+                </p>
+              </div>
+            )}
             {unclear.length > 0 && (
               <p className="mt-2 text-sm text-yellow-800">
                 হলুদ দাগ দেওয়া বিষয়গুলো পরিষ্কার বোঝা যায়নি, একবার দেখে নিন।
@@ -185,14 +279,7 @@ export function CheckinFlow({
           <button
             className="btn-primary flex-1"
             disabled={save.isPending}
-            onClick={() =>
-              save.mutate({
-                patientId,
-                source,
-                transcript: transcript ?? undefined,
-                symptoms,
-              })
-            }
+            onClick={() => submit()}
           >
             {save.isPending ? (
               "ঝুঁকি যাচাই হচ্ছে..."
@@ -213,10 +300,12 @@ export function CheckinFlow({
       <Steps steps={STEP_LABELS} current={0} />
       <div className="card flex flex-col items-center gap-5 py-8 text-center">
         <p className="text-lg text-slate-600">
-          জ্বরের {toBn(dayOfFever)} নম্বর দিন। রোগী আজ কেমন আছে, নিজের ভাষায় বলুন।
+          জ্বরের {toBn(dayOfFever)} নম্বর দিন। সকাল থেকে এখন পর্যন্ত সারা দিন
+          রোগী কেমন ছিল, একবারে নিজের ভাষায় বলুন (২ মিনিট পর্যন্ত)।
         </p>
         <ul className="text-left text-sm text-slate-500">
-          <li>• জ্বর কত? কমেছে কি?</li>
+          <li>• জ্বর কত ছিল? এখন কমেছে কি?</li>
+          <li>• সারা দিনে কতবার বমি হয়েছে?</li>
           <li>• বমি, পেটব্যথা, রক্তপাত আছে কি?</li>
           <li>• পানি খেতে পারছে? প্রস্রাব হচ্ছে?</li>
         </ul>
@@ -252,6 +341,11 @@ export function CheckinFlow({
         <p className="text-xl font-bold">
           {recording ? "বলছেন... শেষ হলে আবার চাপ দিন" : "চাপ দিয়ে বলা শুরু করুন"}
         </p>
+        {recording && rec.elapsed >= MAX_RECORD_SECONDS - RECORD_WARN_SECONDS && (
+          <p role="status" className="rounded-full bg-amber-100 px-4 py-1.5 font-semibold text-amber-900">
+            আর {toBn(Math.max(0, MAX_RECORD_SECONDS - rec.elapsed))} সেকেন্ড বাকি, শেষ কথাটা বলে নিন
+          </p>
+        )}
       </div>
 
       {(error ?? rec.error) && (

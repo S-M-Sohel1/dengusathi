@@ -35,6 +35,9 @@ describe("normalizeCbc", () => {
     hemoglobinGdl: 14,
     reportDate: null,
     labName: null,
+    patientName: null,
+    patientAgeRaw: null,
+    patientSexRaw: null,
     confidence: "high",
   };
 

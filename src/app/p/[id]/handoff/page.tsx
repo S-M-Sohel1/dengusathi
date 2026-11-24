@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { symptomsSchema } from "~/lib/ai/schemas";
-import { areaName } from "~/lib/areas";
+import { areaNameEn } from "~/lib/areas";
 import {
   REASON_EN,
   RISK_FACTOR_EN,
@@ -106,6 +106,12 @@ function Trend({
   );
 }
 
+const RESOLUTION_EN: Record<string, string> = {
+  CONFIRMED_SAME: "family confirmed it is this patient",
+  REJECTED_OTHER: "family said another person; not used",
+  NOTED: "noted",
+};
+
 export default async function HandoffPage({
   params,
 }: {
@@ -121,6 +127,11 @@ export default async function HandoffPage({
       fluids: {
         where: { createdAt: { gte: new Date(Date.now() - 2 * 864e5) } },
         select: { ml: true, createdAt: true },
+      },
+      conflicts: {
+        where: { createdAt: { gte: new Date(Date.now() - 14 * 864e5) } },
+        orderBy: { createdAt: "desc" },
+        take: 8,
       },
     },
   });
@@ -200,7 +211,7 @@ export default async function HandoffPage({
               {patient.weightKg ? ` · ${patient.weightKg} kg` : ""}
             </dd>
             <dt className="font-semibold">Area</dt>
-            <dd>{areaName(patient.area)}</dd>
+            <dd>{areaNameEn(patient.area)}</dd>
             <dt className="font-semibold">Fever onset</dt>
             <dd>
               {fmt(patient.feverStart)} → <b>today = fever day {day}</b>
@@ -260,6 +271,24 @@ export default async function HandoffPage({
                         ? "WHO 2009"
                         : "app rule"}
                     ]
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {patient.conflicts.length > 0 && (
+          <section className="rounded-lg border border-amber-300 bg-amber-50 p-3 print:bg-white">
+            <h2 className="mb-1 font-bold">Data conflicts</h2>
+            <ul className="list-disc pl-5 text-sm">
+              {patient.conflicts.map((c) => (
+                <li key={c.id}>
+                  {c.textEn}{" "}
+                  <span className="text-xs text-slate-600">
+                    [{c.source.toLowerCase()},{" "}
+                    {c.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" })}:{" "}
+                    {RESOLUTION_EN[c.resolution] ?? c.resolution}]
                   </span>
                 </li>
               ))}

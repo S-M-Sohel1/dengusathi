@@ -12,7 +12,6 @@ import { emptySymptoms, type Symptoms } from "../src/lib/ai/schemas";
 import { FALLBACK_ADVICE_BN } from "../src/lib/risk/advice";
 import { evaluateRules, type RuleLab } from "../src/lib/risk/who-rules";
 import { startOfDhakaDay } from "../src/lib/fluids";
-import { AREAS } from "../src/lib/areas";
 
 const db = new PrismaClient();
 const DAY = 864e5;
@@ -48,18 +47,26 @@ const NAMES = [
 
 /** Area weights: Dhaka areas busier; Sonapur gets a planted outbreak in the last 3 days. */
 const AREA_WEIGHT: Record<string, number> = {
-  "noakhali-sadar": 1.2,
-  sonapur: 0.8,
-  begumganj: 0.9,
-  companiganj: 0.5,
-  mirpur: 1.6,
-  uttara: 1.2,
-  jatrabari: 1.5,
-  mohammadpur: 1.3,
-  "chattogram-sadar": 1.1,
-  "cumilla-sadar": 0.8,
+  "noakhali.noakhali-sadar": 1.2,
+  "noakhali.sonapur": 0.8,
+  "noakhali.begumganj": 0.9,
+  "noakhali.companiganj": 0.5,
+  "dhaka.mirpur": 1.6,
+  "dhaka.uttara-west": 1.2,
+  "dhaka.jatrabari": 1.5,
+  "dhaka.mohammadpur": 1.3,
+  "chattogram.kotwali": 1.1,
+  "cumilla.cumilla-sadar": 0.8,
+  // A light nationwide spread so the district view has something outside the demo region.
+  "gazipur.gazipur-sadar": 0.7,
+  "narayanganj.narayanganj-sadar": 0.6,
+  "barishal.barisal-sadar": 0.6,
+  "sylhet.sylhet-sadar": 0.4,
+  "mymensingh.mymensingh-sadar": 0.4,
+  "rangpur.rangpur-sadar": 0.3,
+  "feni.feni-sadar": 0.4,
 };
-const SPIKE_AREA = "sonapur";
+const SPIKE_AREA = "noakhali.sonapur";
 
 interface Rows {
   patients: Prisma.PatientCreateManyInput[];
@@ -199,10 +206,11 @@ async function seedPopulation() {
   });
   const rows: Rows = { patients: [], checkIns: [], labs: [], assessments: [] };
   for (let d = 21; d >= 0; d--) {
-    for (const area of AREAS) {
+    for (const [areaId, weight] of Object.entries(AREA_WEIGHT)) {
+      const area = { id: areaId };
       // Outbreak cluster: fever onsets ~2 days ago, so those patients enter the critical phase (day 3) today.
       const spike = area.id === SPIKE_AREA && d === 2;
-      const expected = AREA_WEIGHT[area.id]! * (spike ? 9 : 1.1);
+      const expected = weight * (spike ? 9 : 1.1);
       const n = Math.floor(expected + rand());
       for (let i = 0; i < n; i++) {
         const feverStart = new Date(
@@ -240,7 +248,7 @@ async function seedDemoPatient() {
       nickname: "রহিম (ডেমো)",
       sex: "male",
       weightKg: 27,
-      area: "sonapur",
+      area: "noakhali.sonapur",
       isSynthetic: true,
       ...patient,
       createdAt: feverStart,

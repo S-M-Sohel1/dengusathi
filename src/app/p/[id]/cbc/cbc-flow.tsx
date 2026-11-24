@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { AiProgress } from "~/app/_components/ai-progress";
 import { Steps } from "~/app/_components/steps";
+import { IdentityCheck, OtherPersonNotice } from "~/app/_components/identity-check";
 import { blobToBase64 } from "~/lib/audio/toWav";
 import { compressImage } from "~/lib/image/compress";
 import { api } from "~/trpc/react";
@@ -86,10 +87,12 @@ const todayIso = () =>
 
 export function CbcFlow({
   patientId,
+  patientName,
   feverStartIso,
   samples,
 }: {
   patientId: string;
+  patientName: string;
   feverStartIso: string;
   samples: Sample[];
 }) {
@@ -117,6 +120,14 @@ export function CbcFlow({
   const [pdfName, setPdfName] = useState<string | null>(null);
   // Sample reports carry fictional printed dates; never use them as the result date.
   const [fromSample, setFromSample] = useState(false);
+  // Patient details printed on the report, checked against the profile on save.
+  const [printed, setPrinted] = useState<{
+    name: string | null;
+    ageRaw: string | null;
+    sexRaw: string | null;
+  } | null>(null);
+  type SaveInput = Parameters<typeof save.mutate>[0];
+  const lastSave = useRef<SaveInput | null>(null);
 
   const extract = api.cbc.extract.useMutation({
     onSuccess: ({ raw, values: v }) => {
@@ -142,6 +153,11 @@ export function CbcFlow({
         notCbc: false,
         lab: raw.labName,
       });
+      setPrinted({
+        name: raw.patientName,
+        ageRaw: raw.patientAgeRaw,
+        sexRaw: raw.patientSexRaw,
+      });
       // Use the printed report date only if it fits this illness (not before the fever, not in the future).
       if (
         !fromSample &&
@@ -158,7 +174,8 @@ export function CbcFlow({
   });
 
   const save = api.cbc.save.useMutation({
-    onSuccess: () => {
+    onSuccess: (r) => {
+      if (r.outcome !== "saved") return; // held / rejected are shown below
       router.push(`/p/${patientId}?updated=1`);
       router.refresh();
     },
@@ -170,6 +187,7 @@ export function CbcFlow({
     setError(null);
     setValues(null);
     setNotes({ rejected: [], lowConfidence: false, notCbc: false, lab: null });
+    setPrinted(null);
     try {
       if (
         file.type === "application/pdf" ||
@@ -207,6 +225,7 @@ export function CbcFlow({
     setError(null);
     setValues(null);
     setNotes({ rejected: [], lowConfidence: false, notCbc: false, lab: null });
+    setPrinted(null);
     const base64 = await blobToBase64(blob);
     setPreview(`data:image/png;base64,${base64}`);
     extract.mutate({ imageBase64: base64, mimeType: "image/png" });
@@ -222,7 +241,41 @@ export function CbcFlow({
   const anyValue = values && Object.values(values).some((v) => v !== "");
   const anyError = values && FIELDS.some((f) => fieldError(f, values[f.key]));
 
-  if (save.isPending || save.isSuccess)
+  const resetAll = () => {
+    save.reset();
+    setPreview(null);
+    setValues(null);
+    setPrinted(null);
+    setError(null);
+  };
+  const answer = (identityAnswer: "same" | "other") =>
+    lastSave.current && save.mutate({ ...lastSave.current, identityAnswer });
+
+  if (save.data?.outcome === "held")
+    return (
+      <div className="flex flex-col gap-4">
+        <Steps steps={["ছবি দিন", "মিলিয়ে নিন", "ফলাফল"]} current={1} />
+        <IdentityCheck
+          patientName={patientName}
+          what="report"
+          conflicts={save.data.conflicts}
+          busy={save.isPending}
+          onSame={() => answer("same")}
+          onOther={() => answer("other")}
+        />
+      </div>
+    );
+  if (save.data?.outcome === "rejected")
+    return (
+      <OtherPersonNotice
+        what="report"
+        dangerIfOther={save.data.dangerIfOther}
+        patientId={patientId}
+        onRetry={resetAll}
+      />
+    );
+
+  if (save.isPending || save.data?.outcome === "saved")
     return (
       <div className="flex flex-col gap-4">
         <Steps steps={["ছবি দিন", "মিলিয়ে নিন", "ফলাফল"]} current={2} />
@@ -465,9 +518,10 @@ export function CbcFlow({
                 date === todayIso()
                   ? new Date()
                   : new Date(`${date}T10:00:00+06:00`);
-              save.mutate({
+              const payload: SaveInput = {
                 patientId,
                 takenAt,
+                printed: printed ?? undefined,
                 plateletUl:
                   num(values.plateletUl) != null
                     ? Math.round(num(values.plateletUl)!)
@@ -478,7 +532,9 @@ export function CbcFlow({
                     ? Math.round(num(values.wbcUl)!)
                     : null,
                 hbGdl: num(values.hbGdl),
-              });
+              };
+              lastSave.current = payload;
+              save.mutate(payload);
             }}
           >
             {save.isPending ? (

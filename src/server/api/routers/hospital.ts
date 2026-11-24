@@ -1,7 +1,7 @@
 import { z } from "zod";
 import osm from "~/data/hospitals.json";
 import manual from "~/data/hospitals-manual.json";
-import { AREAS } from "~/lib/areas";
+import { DEFAULT_AREA_ID, getArea } from "~/lib/areas";
 import { haversineKm } from "~/lib/geo";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 
@@ -45,7 +45,7 @@ export const hospitalRouter = createTRPCRouter({
       }),
     )
     .query(({ input }) => {
-      const area = AREAS.find((a) => a.id === input.area) ?? AREAS[0];
+      const area = getArea(input.area ?? "") ?? getArea(DEFAULT_AREA_ID)!;
       const origin =
         input.lat != null && input.lng != null
           ? { lat: input.lat, lng: input.lng, source: "gps" as const }

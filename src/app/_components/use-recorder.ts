@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export const MAX_RECORD_SECONDS = 45;
+/** Long enough to tell the whole day in one message (the app sends it as compressed MP3). */
+export const MAX_RECORD_SECONDS = 120;
+/** Show a "time almost up" warning for the last few seconds. */
+export const RECORD_WARN_SECONDS = 15;
 /** Number of bars in the live voice visualizer. */
 export const BAR_COUNT = 32;
 

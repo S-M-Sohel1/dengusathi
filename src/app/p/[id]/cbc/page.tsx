@@ -11,6 +11,7 @@ export default async function CbcPage({ params }: { params: Promise<{ id: string
     <main className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-5">
       <h1 className="text-2xl font-bold">{patient.nickname}: CBC রিপোর্ট</h1>
       <CbcFlow
+        patientName={patient.nickname}
         patientId={id}
         feverStartIso={patient.feverStart.toISOString()}
         samples={samples.map((s) => ({ id: s.id, title: s.title }))}

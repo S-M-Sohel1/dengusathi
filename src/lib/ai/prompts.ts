@@ -1,6 +1,6 @@
 export const VOICE_EXTRACTION_PROMPT = `
 You are helping a family caregiver in Bangladesh report a dengue patient's condition.
-The attached audio is a short voice message in Bangla (it may be colloquial, regional dialect
+The attached audio is a voice message in Bangla (it may be colloquial, regional dialect
 such as Noakhali/Chattogram/Sylheti, or mixed with English words like "platelet", "saline").
 
 Tasks:
@@ -24,13 +24,31 @@ Tasks:
      interpret them by meaning.
 3. List in "unclearFields" the symptom keys that the speaker mentioned vaguely and should be asked again.
 
+WHOLE-DAY MESSAGES. The caregiver usually describes the whole day (morning to now) in one message,
+often out of order. Summarise the DAY, not just the present moment:
+   - Counts ADD UP across the day: "সকালে দুইবার বমি, বিকেলে আরেকবার" -> vomitingCount24h 3.
+   - A danger sign that happened AT ANY TIME today stays true even if it has stopped or the patient is
+     "ভালো" now: "সকালে দাঁত দিয়ে রক্ত পড়েছিল, এখন বন্ধ" -> bleedingGums true. Never let a later "ভালো আছে"
+     erase an earlier danger sign.
+   - temperatureF = the HIGHEST reading said for today.
+   - Fever earlier that is gone now ("দুপুরে ১০৩ ছিল, এখন জ্বর নেই") -> feverJustDropped true (this is the
+     dangerous phase in dengue, so do not treat it as recovery).
+   - If something changed and the current state is unclear, add the field to unclearFields.
+4. "timeline": up to 6 short Bangla notes in the order of the day, each with "when"
+   (morning / noon / afternoon / evening / night / now; "unspecified" if no time was said). Keep the
+   speaker's meaning; no advice. Empty array for a one-line message with no times.
+5. "mentioned": WHO is being described, only from what is said (null if not said): name, ageYears, sex,
+   relationBn (relation to the speaker as said, e.g. "ছেলে", "বাবা"), feverDay ("আজ জ্বরের তিন দিন" -> 3).
+   multiplePatients true if the message describes more than one sick person (e.g. two children);
+   then fill symptoms only for the person described most and add "multiplePatients" to unclearFields.
+
 Return JSON only, matching the schema.
 `.trim();
 
 export const VOICE_TEXT_EXTRACTION_PROMPT = (transcript: string) =>
   `${VOICE_EXTRACTION_PROMPT.replace(
-    "The attached audio is a short voice message",
-    "The text below is a transcript of a short voice message",
+    "The attached audio is a voice message",
+    "The text below is a transcript of a voice message",
   )}\n\nTranscript:\n"""${transcript}"""\nSet transcriptBn to the transcript as given.`;
 
 export const CBC_EXTRACTION_PROMPT = `
@@ -44,6 +62,8 @@ Read ONLY the patient's RESULT column, never the reference/normal range column.
 - hemoglobinGdl: Hb in g/dL as a number.
 - reportDate: ISO date (YYYY-MM-DD) if printed, else null.
 - labName: name of the lab/hospital if printed.
+- patientName, patientAgeRaw (as printed, e.g. "9 Y", "8Y 6M"), patientSexRaw (as printed, e.g. "M", "Female"):
+  the PATIENT's details exactly as printed (not the doctor's or lab's name), null if not printed or unreadable.
 - confidence: "low" if the photo is blurry, cropped, handwritten, or any value is uncertain.
 
 Use null for anything you cannot read. Do not convert units. Return JSON only.

@@ -3,8 +3,11 @@ import { type Prisma } from "../../../generated/prisma";
 import { reviewRisk } from "~/lib/ai/service";
 import { symptomsSchema } from "~/lib/ai/schemas";
 import { dhakaHour, fluidTargetMl, startOfDhakaDay } from "~/lib/fluids";
+import { dhakaDay } from "~/lib/anomaly";
+import { mergeDaySymptoms } from "~/lib/risk/merge-day";
 import { combine } from "~/lib/risk/score";
-import { evaluateRules } from "~/lib/risk/who-rules";
+import { reportConflicts, symptomsVsLab } from "~/lib/risk/consistency";
+import { evaluateRules, maxStatus } from "~/lib/risk/who-rules";
 import { db } from "~/server/db";
 
 /** Max time to wait for the optional AI risk review before falling back to rules only. */
@@ -28,20 +31,23 @@ export async function reassessPatient(
 
   const now = new Date();
   const latest = patient.checkIns.at(-1);
+  // The day's picture = worst of every check-in on the latest check-in's (Dhaka) day, so a second
+  // message ("এখন ভালো আছে") cannot erase a danger sign reported earlier the same day.
+  const today = latest
+    ? patient.checkIns.filter((c) => dhakaDay(c.createdAt) === dhakaDay(latest.createdAt))
+    : [];
   const fluidLogs = await db.fluidLog.findMany({
     where: { patientId, createdAt: { gte: startOfDhakaDay(now) } },
     select: { ml: true },
   });
   const fluidsTodayMl = fluidLogs.reduce((s, l) => s + l.ml, 0);
   const fluidTarget = fluidTargetMl(patient.ageYears, patient.weightKg).ml;
-  const rule = evaluateRules({
+  const daySymptoms = latest
+    ? mergeDaySymptoms(today.map((c) => symptomsSchema.parse(c.symptoms)))
+    : null;
+  const ruleInput = {
     patient,
-    latestCheckIn: latest
-      ? {
-          createdAt: latest.createdAt,
-          symptoms: symptomsSchema.parse(latest.symptoms),
-        }
-      : null,
+    latestCheckIn: latest && daySymptoms ? { createdAt: latest.createdAt, symptoms: daySymptoms } : null,
     labs: patient.labs,
     now,
     fluids: {
@@ -50,7 +56,44 @@ export async function reassessPatient(
       logged: fluidLogs.length > 0,
       localHour: dhakaHour(now),
     },
-  });
+  };
+  let rule = evaluateRules(ruleInput);
+
+  // ---- Contradictions (src/lib/risk/consistency.ts): never lower risk on doubtful data, and
+  // treat contradictory data itself as a reason to see a doctor (at least YELLOW).
+  const latestLab = patient.labs.at(-1) ?? null;
+  const clinical = [];
+  if (latestLab) {
+    const jump = reportConflicts({
+      lab: latestLab,
+      previous: patient.labs.slice(0, -1),
+      feverStart: patient.feverStart,
+      now,
+    }).filter((c) => c.code === "LAB_JUMP");
+    if (jump.length > 0) {
+      // A suspiciously good report may not lower the status: also judge without it, keep the worse.
+      const without = evaluateRules({ ...ruleInput, labs: patient.labs.slice(0, -1) });
+      if (maxStatus(without.status, rule.status) !== rule.status) rule = without;
+      clinical.push(...jump);
+    }
+  }
+  const vsLab = symptomsVsLab(daySymptoms, latestLab, startOfDhakaDay(now));
+  if (vsLab) clinical.push(vsLab);
+  if (clinical.length > 0) {
+    rule = {
+      ...rule,
+      status: maxStatus(rule.status, "YELLOW"),
+      reasons: [
+        ...rule.reasons,
+        ...clinical.map((c) => ({
+          source: "rule" as const,
+          code: "DATA_CONFLICT",
+          textBn: c.textBn,
+          level: "YELLOW" as const,
+        })),
+      ],
+    };
+  }
 
   let ai = null;
   if (opts.useAi !== false) {

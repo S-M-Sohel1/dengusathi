@@ -88,6 +88,7 @@ export const REASON_EN: Record<string, string> = {
   VOMIT_BLOOD: "Haematemesis",
   BLACK_STOOL: "Melaena",
   ANY_BLEEDING: "Bleeding reported (site not stated / other)",
+  DATA_CONFLICT: "Contradictory data (see Data conflicts); raised to at least YELLOW",
   MUCOSAL_BLEEDING: "Mucosal bleeding (WHO warning sign)",
   LETHARGY_RESTLESSNESS: "Lethargy / restlessness (WHO warning sign)",
   COLD_CLAMMY: "Cold clammy extremities (possible shock)",

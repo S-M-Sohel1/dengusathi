@@ -26,6 +26,7 @@
     "samples:cbc": "node scripts/samples/make-cbc-samples.mjs"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@google/genai": "^3.6.1",
     "@prisma/client": "^6.6.0",
     "@t3-oss/env-nextjs": "^0.12.0",

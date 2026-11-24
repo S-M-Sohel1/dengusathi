@@ -13,7 +13,7 @@ const CHECKS: { fields: (keyof Symptoms)[]; pattern: RegExp }[] = [
     pattern:
       /পেট(ে|ের)?\s*(খুব\s*)?(ব্যথা|ব্যাথা|বেথা|বাথা|কামড়)|তলপেট|stomach|abdom|pet\s*(e\s*)?bat?ha/i,
   },
-  { fields: ["vomitingCount24h"], pattern: /বমি|ওয়াক|vomit|bomi/i },
+  { fields: ["vomitingCount24h"], pattern: /বমি|বোমি|বামি|ওয়াক|vomit|bomi/i },
   {
     fields: [
       "bleedingGums",
@@ -27,10 +27,12 @@ const CHECKS: { fields: (keyof Symptoms)[]; pattern: RegExp }[] = [
   },
   {
     fields: ["drowsyOrRestless"],
-    pattern: /ঝিম|অস্থির|নিস্তেজ|অজ্ঞান|শুধু\s*ঘুম|drows|restless|jhim/i,
+    pattern: /ঝিম|জিমা|অস্থির|নিস্তেজ|অজ্ঞান|শুধু\s*ঘুম|drows|restless|jhim/i,
   },
-  { fields: ["noUrine6h"], pattern: /প্রস্রাব|পেশাব|প্রসাব|urine|prosrab/i },
+  { fields: ["noUrine6h"], pattern: /প্রস্রাব|পেশাব|পেসাব|প্রসাব|পস্রা|urine|prosrab/i },
   { fields: ["coldClammyHands"], pattern: /ঠান্ডা|ঠাণ্ডা|cold|thanda/i },
+  // Whisper (the backup speech model) often writes these misspellings; caught above too:
+  // "বোমি" (বমি), "পস্রা" (প্রস্রাব), "জিমাচ্ছে" (ঝিমাচ্ছে).
   {
     fields: ["breathingDifficulty"],
     pattern: /শ্বাস|নিঃশ্বাস|দম\s*(বন্ধ|নিতে)|breath|shash/i,

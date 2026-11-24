@@ -4,6 +4,11 @@
  * 16 kHz mono = ~32 KB per second, so a 30 s clip is ~1 MB.
  */
 export async function blobToWav16k(blob: Blob): Promise<Blob> {
+  return encodeWav(await decodeTo16kMono(blob), 16_000);
+}
+
+/** Decode any recorded blob to 16 kHz mono float samples (the rate speech models expect). */
+export async function decodeTo16kMono(blob: Blob): Promise<Float32Array> {
   const arrayBuf = await blob.arrayBuffer();
   const ctx = new AudioContext();
   const decoded = await ctx.decodeAudioData(arrayBuf);
@@ -17,7 +22,7 @@ export async function blobToWav16k(blob: Blob): Promise<Blob> {
   src.connect(offline.destination);
   src.start();
   const rendered = await offline.startRendering();
-  return encodeWav(rendered.getChannelData(0), targetRate);
+  return rendered.getChannelData(0);
 }
 
 function encodeWav(samples: Float32Array, sampleRate: number): Blob {

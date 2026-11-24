@@ -83,9 +83,9 @@ async function withFallback<T>(
   });
 }
 
-/** Bangla voice clip (WAV preferred) -> transcript + structured symptoms. */
+/** Bangla voice clip (16 kHz MP3 from the app; WAV also accepted) -> transcript + structured symptoms. */
 export async function extractVoice(audioBase64: string, mimeType: string) {
-  return cached(["voice-v3", audioBase64], () =>
+  return cached(["voice-v4", audioBase64], () =>
     withFallback<VoiceExtraction>(
       "voice",
       () =>
@@ -97,7 +97,9 @@ export async function extractVoice(audioBase64: string, mimeType: string) {
       async () => {
         const ext = mimeType.includes("wav")
           ? "wav"
-          : mimeType.includes("mp4")
+          : mimeType.includes("mpeg") || mimeType.includes("mp3")
+            ? "mp3"
+            : mimeType.includes("mp4")
             ? "m4a"
             : "webm";
         const transcript = await groqTranscribe(
@@ -116,7 +118,7 @@ export async function extractVoice(audioBase64: string, mimeType: string) {
 /** Typed text (e.g. from browser Web Speech API) -> structured symptoms. */
 export async function extractFromTranscript(transcript: string) {
   const prompt = VOICE_TEXT_EXTRACTION_PROMPT(transcript);
-  return cached(["text-v3", transcript], () =>
+  return cached(["text-v4", transcript], () =>
     withFallback<VoiceExtraction>(
       "text",
       () => geminiJson({ prompt, schema: voiceExtractionSchema }),
@@ -127,7 +129,7 @@ export async function extractFromTranscript(transcript: string) {
 
 /** CBC report photo (JPEG, already compressed client-side) -> raw values. */
 export async function extractCbc(imageBase64: string, mimeType: string) {
-  return cached(["cbc-v1", imageBase64], () =>
+  return cached(["cbc-v2", imageBase64], () =>
     withFallback<CbcExtraction>(
       "cbc",
       () =>
