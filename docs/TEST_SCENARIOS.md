@@ -106,6 +106,7 @@ Sample reports used below are under CBC → "নমুনা রিপোর্�
 
 | # | Steps | Expected |
 |---|---|---|
+| H0 | Open `/dashboard` signed out, then **Google দিয়ে স্টাফ লগইন** | Lock screen first ("শুধু হাসপাতাল ও স্বাস্থ্য কর্মকর্তাদের জন্য"); after Google sign-in the dashboard opens with your email and a লগআউট button. An account not in `STAFF_EMAILS` sees "এই অ্যাকাউন্টের অনুমতি নেই". Patient pages never ask for login. |
 | H1 | Open after a fresh seed | Red alert banner for **সোনাপুর, নোয়াখালী** (Sonapur spike), KPI cards with sparklines, map, 15-day chart. |
 | H2 | Switch উপজেলা ↔ জেলা (upazila ↔ district) | Map circles and table change level. Totals stay the same. |
 | H3 | Division filter → চট্টগ্রাম / ঢাকা (Chattogram / Dhaka) | KPIs, chart, map and table show only that division. |
@@ -125,6 +126,7 @@ Sample reports used below are under CBC → "নমুনা রিপোর্�
 
 ## Suggested 6-minute judge run
 
+0. **Before going on stage:** sign in to `/dashboard` on the laptop (H0) so no login popup is needed live.
 1. **Problem (30 s):** the dashboard H1, Sonapur spike.
 2. **Challenge 1 (90 s):** B1 live on stage (long whole-day voice) → timeline → RED, then B8 ("এখন ভালো আছে", "fine now") stays RED.
 3. **CBC (60 s):** D1 on demo-rahim → RED with HCT rise.

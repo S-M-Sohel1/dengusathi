@@ -20,6 +20,13 @@ export const env = createEnv({
     GROQ_STT_MODEL: z.string().default("whisper-large-v3"),
     GROQ_TEXT_MODEL: z.string().default("openai/gpt-oss-120b"),
     GROQ_VISION_MODEL: z.string().default("qwen/qwen3.8-27b"),
+    // Staff login (Auth.js + Google) protecting /dashboard. Optional so the patient app still
+    // builds without them; the dashboard then explains that login is not configured.
+    AUTH_SECRET: z.string().optional(),
+    AUTH_GOOGLE_ID: z.string().optional(),
+    AUTH_GOOGLE_SECRET: z.string().optional(),
+    // Comma-separated emails allowed on the dashboard. Empty = any signed-in Google account.
+    STAFF_EMAILS: z.string().optional(),
   },
 
   client: {},
@@ -35,6 +42,10 @@ export const env = createEnv({
     GROQ_STT_MODEL: process.env.GROQ_STT_MODEL,
     GROQ_TEXT_MODEL: process.env.GROQ_TEXT_MODEL,
     GROQ_VISION_MODEL: process.env.GROQ_VISION_MODEL,
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    STAFF_EMAILS: process.env.STAFF_EMAILS,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

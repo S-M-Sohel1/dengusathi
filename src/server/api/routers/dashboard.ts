@@ -1,6 +1,6 @@
 import { detectSpike, dhakaDay, fillDays, lastNDays, type SpikeResult } from "~/lib/anomaly";
 import { getArea, getDistrict, getDivision, resolveAreaId } from "~/lib/areas";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, staffProcedure } from "~/server/api/trpc";
 
 type Status = "GREEN" | "YELLOW" | "RED";
 const RANK: Record<Status, number> = { GREEN: 0, YELLOW: 1, RED: 2 };
@@ -37,7 +37,7 @@ export const dashboardRouter = createTRPCRouter({
    * day was YELLOW or RED. Spikes are checked per upazila and per district (a district can spike
    * from several upazilas that are each too small to flag on their own).
    */
-  overview: publicProcedure.query(async ({ ctx }) => {
+  overview: staffProcedure.query(async ({ ctx }) => {
     const now = new Date();
     const days = lastNDays(15, now);
     const since = new Date(now.getTime() - 15 * 864e5);

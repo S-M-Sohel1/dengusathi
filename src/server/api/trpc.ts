@@ -6,10 +6,11 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+import { getStaff } from "~/server/auth";
 import { db } from "~/server/db";
 
 /**
@@ -104,3 +105,14 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+/**
+ * Staff-only procedure (hospital dashboard). Patients never need to log in; this protects the
+ * area-level overview data, not just the page.
+ */
+export const staffProcedure = publicProcedure.use(async ({ next }) => {
+  const staff = await getStaff();
+  if (!staff)
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "স্টাফ লগইন প্রয়োজন" });
+  return next({ ctx: { staff } });
+});
