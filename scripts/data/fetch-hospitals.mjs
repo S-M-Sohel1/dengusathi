@@ -8,12 +8,17 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 
-const HEAD = `[out:json][timeout:180];area["ISO3166-1"="BD"][admin_level=2]->.bd;`;
-const QUERIES = [
-  `${HEAD}nwr["amenity"="hospital"](area.bd);out center tags;`,
-  `${HEAD}nwr["healthcare"="hospital"]["amenity"!="hospital"](area.bd);out center tags;`,
-  `${HEAD}nwr["amenity"="clinic"]["name"~"Health Complex|Sadar Hospital|District Hospital|স্বাস্থ্য কমপ্লেক্স"](area.bd);out center tags;`,
+// Bangladesh split into 6 tiles: one nationwide query times out on the free Overpass servers.
+const TILES = [
+  [20.5, 88.0, 23.6, 90.3], [20.5, 90.3, 23.6, 92.7],
+  [23.6, 88.0, 24.6, 90.3], [23.6, 90.3, 24.6, 92.7],
+  [24.6, 88.0, 26.7, 90.3], [24.6, 90.3, 26.7, 92.7],
 ];
+const QUERIES = TILES.map(
+  // Keep each query simple (amenity=hospital only); heavier filters time out on the free servers.
+  // Upazila health complexes are mapped as amenity=hospital in OSM Bangladesh.
+  ([s, w, n, e]) => `[out:json][timeout:120];nwr["amenity"="hospital"](${s},${w},${n},${e});out center tags;`,
+);
 
 const endpoints = [
   "https://overpass-api.de/api/interpreter",
@@ -21,6 +26,17 @@ const endpoints = [
   "https://overpass.private.coffee/api/interpreter",
 ];
 async function overpass(q) {
+  for (let round = 0; round < 3; round++) {
+    if (round > 0) {
+      console.warn(`  all servers busy, waiting 30 s (round ${round + 1}/3)`);
+      await new Promise((r) => setTimeout(r, 30_000));
+    }
+    const els = await tryEndpoints(q);
+    if (els) return els;
+  }
+  throw new Error("all Overpass endpoints failed");
+}
+async function tryEndpoints(q) {
   for (const url of endpoints) {
     try {
       const res = await fetch(url, {
@@ -35,10 +51,25 @@ async function overpass(q) {
       console.warn(url, "failed:", e.message);
     }
   }
-  throw new Error("all Overpass endpoints failed");
+  return null;
 }
 const data = { elements: [] };
-for (const q of QUERIES) data.elements.push(...(await overpass(q)));
+// The tiles are rectangles and overlap India / Myanmar: keep only hospitals inside the
+// Bangladesh boundary (an ids-only area query is light enough for the free servers).
+const inBd = new Set(
+  (
+    await overpass(
+      `[out:json][timeout:180];area["ISO3166-1"="BD"][admin_level=2]->.bd;nwr["amenity"="hospital"](area.bd);out ids;`,
+    )
+  ).map((e) => `${e.type}/${e.id}`),
+);
+console.log(`${inBd.size} hospitals inside Bangladesh`);
+
+for (const [i, q] of QUERIES.entries()) {
+  const els = await overpass(q);
+  console.log(`tile ${i + 1}/${QUERIES.length}: ${els.length}`);
+  data.elements.push(...els.filter((e) => inBd.has(`${e.type}/${e.id}`)));
+}
 
 // Name generic entries ("Upazila Health Complex") after the nearest upazila so the list is readable.
 const { areas, districts } = JSON.parse(readFileSync("src/data/bd-locations.json", "utf8"));
@@ -66,6 +97,8 @@ for (const e of data.elements) {
     name = `${a.en} ${name.replace(/^uhc$/i, "Upazila Health Complex")}`;
   }
   // Same name within ~1 km is the same hospital mapped twice (node + building).
+  if (seen.has(`${e.type}/${e.id}`)) continue;
+  seen.add(`${e.type}/${e.id}`);
   const key = `${name.toLowerCase()}|${p.lat.toFixed(2)}|${p.lng.toFixed(2)}`;
   if (seen.has(key)) continue;
   seen.add(key);

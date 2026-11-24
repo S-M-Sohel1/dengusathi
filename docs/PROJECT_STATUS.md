@@ -1,6 +1,6 @@
 # DengueSathi: project status and next steps
 
-_Last updated: 2026-11-24 · latest commit `152833f` on `main` · live at https://dengusathi.vercel.app_
+_Last updated: 2026-11-24 (afternoon) · live at https://dengusathi.vercel.app · manual test list: `docs/TEST_SCENARIOS.md`_
 
 Team Prompt_Pirates (NSTU): Md. Yeasin Arafat, Sohel Mahmud, Aparajita Barua.
 Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final demo.
@@ -12,6 +12,11 @@ Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final de
 | Area | Status | Where |
 |---|---|---|
 | New patient (no login, ID kept in the browser, share link) | ✅ | `/new`, `/p/[id]` |
+| **All of Bangladesh:** 8 divisions, 64 districts, 569 upazilas / city thanas. Area picker: GPS "find my area" (only the area is stored), forgiving Bangla / English / Banglish search, quick chips, district → upazila list. Centres from OSM / upazila health complexes; 51 marked approximate (excluded from GPS) | ✅ | `area-picker.tsx`, `src/lib/areas.ts`, `area-search.ts`, `scripts/data/import-bd-locations.mjs` |
+| **Challenge 1, whole-day voice:** up to 2 min (16 kHz 32 kbps MP3, ~480 KB), last-15 s warning; prompt sums counts over the day, keeps any danger sign from earlier in the day, flags fever that dropped; timeline (সকাল / দুপুর / বিকেল) on the confirm screen; several check-ins on one day are merged keeping the worst of each symptom | ✅ | `toMp3.ts`, `prompts.ts`, `merge-day.ts` |
+| **Challenge 2, wrong patient:** CBC printed name / age / sex and the person described in voice (age, sex, name, two sick people) checked against the profile (Bangla↔English names). Data is held and the family asked "এটা কি রহিমের?"; "other" -> not saved, but told to take THAT person to hospital if the data is dangerous | ✅ | `src/lib/risk/consistency.ts`, `identity-check.tsx`, `DataConflict` table |
+| **Challenge 2, contradictions:** "well" vs platelets < 50k, severe signs vs normal CBC, implausible overnight platelet recovery, report dated in future / before fever / old, fever day said ≠ record. Policy: never lower risk on doubtful data; contradictions raise to at least YELLOW; shown on the handoff card under "Data conflicts" | ✅ | `consistency.ts`, `assess.ts`, handoff |
+| Temperature input accepts Bangla digits and Celsius (35-42 -> °F) | ✅ | `src/lib/temperature.ts` |
 | Voice check-in: recorder with live bars and timer → 16 kHz WAV → AI symptom extraction → confirm chips; typed-text and tap-form fallbacks; 3-step indicator | ✅ | `/p/[id]/checkin` |
 | CBC report: **camera** or **file/gallery** (images and **PDF**), or sample reports → AI read → unit normalisation and sanity ranges → confirm | ✅ | `/p/[id]/cbc` |
 | Risk engine: WHO 2009 warning-sign rules (AI can only *raise* the status), GREEN / YELLOW / RED with reasons tagged "WHO 2009" or "app rule" | ✅ | `src/lib/risk/` |
@@ -21,20 +26,21 @@ Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final de
 | Daily fluid tracker (glass / cup / ORS, undo; Holliday-Segar for children) + `LOW_FLUIDS` rule (day 3-7, < 50% by 6 pm) | ✅ | `src/lib/fluids.ts` |
 | Calendar reminders (.ics, 9 am and 8 pm through fever day 7) | ✅ | `/p/[id]/reminders.ics` |
 | Emergency handoff card for the doctor (English, QR code, lab table with HCT Δ, symptom log, fluids, prints on one A4 page) | ✅ | `/p/[id]/handoff` |
-| Nearest hospitals (OSM + 3 hand-entered Noakhali hospitals marked approximate; public/emergency first; 999 / 16263) | ✅ | `/p/[id]/hospitals` |
-| Hospital dashboard: KPI cards with sparklines and change vs yesterday, area map, 15-day chart, Poisson-aware spike detection (z ≥ 2, ≥ 3 cases, ≥ 1.5×) | ✅ | `/dashboard` |
+| Nearest hospitals, nationwide: 2,054 OSM hospitals inside Bangladesh (all 64 districts) + 3 hand-entered Noakhali ones; public/emergency first; warning + 16263 / 999 when the nearest is > 25 km (9 remote upazilas, e.g. Teknaf, Sandwip) | ✅ | `/p/[id]/hospitals`, `scripts/data/fetch-hospitals.mjs` |
+| Hospital dashboard: upazila ↔ district view, division filter, KPI cards with sparklines, map, 15-day chart, Poisson-aware spike detection per upazila and per district (z ≥ 2, ≥ 3 cases, ≥ 1.5×) | ✅ | `/dashboard` |
 | "How it works" auto-playing walkthrough | ✅ | `/how-it-works` |
 | Staged AI progress (instead of spinners); AI review time budget of 10 s | ✅ | `ai-progress.tsx`, `assess.ts` |
 | AI reliability: Gemini primary → fallback list (one retry on 503, 404 skipped) → hedged Groq after 12 s; responses cached in Postgres | ✅ | `src/lib/ai/` |
 | Synthetic data: ~270 patients over 21 days, Sonapur outbreak spike, demo patient `demo-rahim` (fever day 4, days 1-3 GREEN, fluid history) | ✅ | `prisma/seed.ts` |
 | 7 synthetic CBC reports (clean / photo / PDF), Bangla TTS alert audio, app icons | ✅ | `public/` |
 | Accessible UI (design system `design-system/denguesathi/MASTER.md`): Lucide icons, focus rings, 44 px targets, reduced motion, contrast fixes | ✅ | |
-| Tests: 80 Vitest tests (rules, CBC parsing, anomaly, fluids, reminders, safety net) | ✅ | `pnpm test` |
+| Tests: 113 Vitest tests (rules, CBC parsing, anomaly, fluids, reminders, safety net, areas / search, day merge, consistency, temperature) | ✅ | `pnpm test` |
 
 ### Docs
 
 | File | Purpose |
 |---|---|
+| `docs/TEST_SCENARIOS.md` | ~50 manual test scenarios with expected results + a 6-minute judge run |
 | `docs/DEMO_SCRIPT.md` | stage script, pre-demo checklist, fallbacks, judge answers |
 | `docs/PITCH_NOTES.md` | impact model (sourced vs assumed), distribution story, slide outline, Q&A |
 | `docs/DOCTOR_REVIEW.md` | printable threshold review sheet for a clinician |
@@ -78,6 +84,7 @@ Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final de
    About 1 day of work.
 2. Show the AI "raising" the status in the demo (a deterministic, cacheable case), or a rules-vs-AI side-by-side.
 3. Fill in real `phone` numbers / `dengueCare` flags for demo-area hospitals; verify the 3 approximate Noakhali coordinates.
+5. **Login (decision pending):** recommended Google sign-in only for staff (`/dashboard`); families stay login-free.
 4. Measure cost per patient (log Gemini token usage) for the pitch.
 
 ### C. Demo-day checklist (see `DEMO_SCRIPT.md`)
@@ -88,6 +95,8 @@ Hackathon format: idea proposal (submitted), 3 days of building, 5-hour final de
 
 ### D. Known issues / risks
 - The free Gemini tier is often overloaded, so some requests take 12-16 s and are answered by Groq (lower quality; the safety net helps).
+- Groq (backup) Bangla speech recognition is rough on both WAV and MP3; the keyword safety net flags danger words it misspells. Gemini handles the MP3 clips perfectly.
+- The dashboard is public (no staff login yet).
 - Groq cannot read PDF reports. If Gemini is down, a PDF falls back to manual entry.
 - Validation so far uses synthetic data only. Do not present 100% as real-world accuracy.
 - The dashboard runs on synthetic data, and the "48 h expected admissions" figure uses an assumed 30% rate. Label it as such.

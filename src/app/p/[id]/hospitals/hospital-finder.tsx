@@ -103,6 +103,25 @@ export function HospitalFinder({
         </div>
       )}
 
+      {q.data?.farAway && (
+        <div role="status" className="card bg-amber-50 ring-amber-300">
+          <p className="font-bold text-amber-900">
+            আপনার কাছে ২৫ কিলোমিটারের মধ্যে কোনো হাসপাতাল আমাদের তালিকায় নেই
+          </p>
+          <p className="mt-1 text-amber-900">
+            তালিকা অসম্পূর্ণ হতে পারে। নিকটতম উপজেলা স্বাস্থ্য কমপ্লেক্সে যান, বা ফোন করুন:
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <a href="tel:16263" className="btn-primary">
+              <Phone className="size-5" aria-hidden /> ১৬২৬৩
+            </a>
+            <a href="tel:999" className="btn-outline">
+              অ্যাম্বুলেন্স ৯৯৯
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="card !p-3">
         {q.isLoading ? (
           <div className="h-72 animate-pulse rounded-2xl bg-slate-200" />

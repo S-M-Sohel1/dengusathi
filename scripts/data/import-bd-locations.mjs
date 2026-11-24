@@ -10,7 +10,7 @@
  * "Thana" suffix dropped, a few missing city areas added, coordinate outliers snapped to the
  * district centre and marked approximate.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.argv[2];
@@ -199,6 +199,24 @@ for (const d of districts) {
   else if (m.dist > 35) console.warn(`district ${d.en}: source point ${m.dist.toFixed(0)} km from OSM centre`);
 }
 
+// Upazila Health Complexes sit in the upazila HQ town: a better "centre" than the middle of a
+// boundary box (which can fall in the Sundarbans or the sea for coastal upazilas).
+const UHC = existsSync("src/data/hospitals.json")
+  ? JSON.parse(readFileSync("src/data/hospitals.json", "utf8"))
+      .filter((h) => /upazila health complex|উপজেলা স্বাস্থ্য কমপ্লেক্স/i.test(`${h.name} ${h.nameBn ?? ""}`))
+      .map((h) => ({ ...h, sk: skel(h.name.replace(/upazila health complex.*$/i, "")) }))
+  : [];
+function uhcPoint(en, near) {
+  const sk = skel(en.replace(/s*sadar$/i, ""));
+  let best = null;
+  for (const h of UHC) {
+    if (!sk || h.sk !== sk) continue;
+    const dist = km(h, near);
+    if (dist <= 70 && (!best || dist < best.dist)) best = { lat: round(h.lat), lng: round(h.lng), dist };
+  }
+  return best;
+}
+
 const areas = [];
 const seen = new Set();
 const stats = { fixed: 0, upazila: 0, place: 0, source: 0, district: 0 };
@@ -225,6 +243,8 @@ for (const [, , districtId, rawEn, rawBn, lat, lng] of php("ThanaSeeder.php").ma
   if (COORD_FIX[id]) {
     point = { lat: COORD_FIX[id][0], lng: COORD_FIX[id][1] };
     stats.fixed++;
+  } else if ((point = uhcPoint(en, d))) {
+    stats.uhc = (stats.uhc ?? 0) + 1;
   } else if ((point = match(OSM_UPAZILAS, bn, en, d, 90))) {
     stats.upazila++;
   } else if ((point = match(OSM_PLACES, bn, en, d, 40))) {

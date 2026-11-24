@@ -33,6 +33,9 @@ const ALL: Hospital[] = [...(manual as Hospital[]), ...(osm as Hospital[])]
   isPublic: h.dengueCare || PUBLIC_RE.test(h.name) || PUBLIC_RE.test(h.nameBn ?? ""),
 }));
 
+/** Beyond this, warn that the list may be incomplete and push the helplines. */
+const FAR_KM = 25;
+
 export const hospitalRouter = createTRPCRouter({
   /** Nearest hospitals to the phone's location, or to the patient's area centre if location is denied. */
   nearest: publicProcedure
@@ -58,6 +61,8 @@ export const hospitalRouter = createTRPCRouter({
         .sort((a, b) => score(a) - score(b))
         .slice(0, input.limit);
 
-      return { origin, hospitals: list };
+      // The map data can be thin in remote upazilas: say so instead of implying the list is complete.
+      const nearestKm = list.length ? Math.min(...list.map((h) => h.distanceKm)) : null;
+      return { origin, hospitals: list, farAway: nearestKm == null || nearestKm > FAR_KM };
     }),
 });

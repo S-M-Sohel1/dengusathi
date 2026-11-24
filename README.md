@@ -57,6 +57,8 @@ Phone testing needs HTTPS for mic and camera: deploy to Vercel or run `cloudflar
 | `node scripts/warm-demo.mjs [url]` | pre-cache the demo sentences and sample reports (instant AI answers on stage) |
 | `node scripts/validate-ai.mjs` | end-to-end AI validation against the running app → `docs/VALIDATION_REPORT.md` |
 | `node scripts/data/fetch-hospitals.mjs` | refresh hospital list from OpenStreetMap |
+| `node scripts/data/fetch-osm-admin.mjs` | refresh OSM district / upazila centres (cache in `scripts/data/cache/`) |
+| `node scripts/data/import-bd-locations.mjs <rokto_backend_docker path>` | rebuild `src/data/bd-locations.json` (all divisions / districts / upazilas) |
 | `node scripts/data/make-alert-audio.mjs` | regenerate the spoken Bangla alerts (Gemini TTS) |
 
 ## Code map
